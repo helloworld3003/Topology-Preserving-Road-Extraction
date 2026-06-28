@@ -68,9 +68,45 @@ The final **`soft-clDice`** score is the harmonic mean of $T_{prec}$ and $T_{sen
 1. **Universal RGB Compatibility:** SpaceNet 5 uses 8-band multispectral imagery, which historically locked models into requiring specialized data. We implemented an on-the-fly tensor slicing algorithm that strips the infrared data, forcing the model to become an absolute master at standard RGB road extraction. This makes the model universally compatible with Google Maps, Drones, and the DeepGlobe dataset.
 2. **Transfer Learning Pipeline:** The architecture is designed to train on one city (e.g., Mumbai), automatically save its weights, and dynamically load those weights to continue fine-tuning on a completely different geography (e.g., Moscow or DeepGlobe).
 3. **Continuous Checkpointing:** The pipeline writes to the `.pth` file continuously at the end of every epoch. If a massive 15-hour training run crashes at hour 14, the weights from the previous epoch are safely preserved.
-4. **Hardware Fallback & Automatic Mixed Precision (AMP):** Dynamically detects execution environments, scaling down to CPU-safe parameters for development on Intel Iris Xe laptops, while instantly activating PyTorch `autocast()` and `GradScaler` to halve VRAM and double training speed when deployed on an RTX 5060 GPU.
+4. **Hardware Fallback & Automatic Mixed Precision (AMP):** Dynamically detects execution environments, scaling down to CPU-safe parameters for development on Intel Iris Xe laptops, while instantly activating PyTorch `autocast()` and `GradScaler` to halve VRAM and double training speed when deployed on an RTX 3050 GPU.
 5. **State-of-the-Art Loss Hybridization:** To guarantee the highest possible score, the network runs a massive multi-part loss function:
    * **BCEWithLogitsLoss:** Anchors the network early to aggressively classify basic road pixels vs background.
    * **CVPR 2021 soft-clDice:** Refines the binary mask by enforcing strict mathematical connectivity for thin, broken tubular structures.
    * **CVPR 2018 VGG Topology Loss:** Dynamically spins up a frozen VGG-19 network and matches the deep feature maps of the ground truth and the prediction to inherently force perceptual structural similarity.
 6. **Anti-Overfitting Protocols:** Employs dynamic Data Augmentation (Random Flips) and a Cosine Annealing Learning Rate Scheduler to force deep generalization across 50 epochs.
+
+---
+
+## 🚀 Quick Start Guide (From Scratch)
+
+Follow these steps exactly to run the pipeline from absolute scratch on your GPU machine:
+
+1. **Install Dependencies:**
+   Ensure you have your Python environment activated, then install the PyTorch libraries compiled specifically for the RTX 3050's CUDA capabilities:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Download the Data Natively:**
+   Run the autonomous downloader. This bypasses the need for the AWS CLI or manual extraction tools. It will pull the dataset directly into the `spacenet_data` folder and automatically clean up the heavy tarball. (If your connection drops, just run it again to resume!)
+   ```bash
+   python download_mumbai.py
+   ```
+
+3. **Train Phase 1 (Mumbai):**
+   Initiate the deep learning training loop. This runs for 50 epochs and continuously saves checkpoints.
+   ```bash
+   python train.py
+   ```
+
+4. **Verify / Run Inference:**
+   Once training is complete (or after an epoch finishes), run the inference script to pluck a random image from the dataset, push it through your newly trained neural network, and plot the actual vs predicted road structures.
+   ```bash
+   python inference.py
+   ```
+
+5. **Train Phase 2 (DeepGlobe Transfer Learning):**
+   *(Optional)* When you are ready to expand beyond SpaceNet, place your DeepGlobe images/masks into the created `deepglobe` directory and run the secondary script. This automatically loads your Mumbai weights and fine-tunes them!
+   ```bash
+   python train2.py
+   ```

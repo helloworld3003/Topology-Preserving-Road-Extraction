@@ -96,12 +96,47 @@ flowchart TB
 <li><strong>Universal RGB Compatibility:</strong> SpaceNet 5 uses 8-band multispectral imagery, which historically locked models into requiring specialized data. We implemented an on-the-fly tensor slicing algorithm that strips the infrared data, forcing the model to become an absolute master at standard RGB road extraction. This makes the model universally compatible with Google Maps, Drones, and the DeepGlobe dataset.</li>
 <li><strong>Transfer Learning Pipeline:</strong> The architecture is designed to train on one city (e.g., Mumbai), automatically save its weights, and dynamically load those weights to continue fine-tuning on a completely different geography (e.g., Moscow or DeepGlobe).</li>
 <li><strong>Continuous Checkpointing:</strong> The pipeline writes to the <code>.pth</code> file continuously at the end of every epoch. If a massive 15-hour training run crashes at hour 14, the weights from the previous epoch are safely preserved.</li>
-<li><strong>Hardware Fallback &amp; Automatic Mixed Precision (AMP):</strong> Dynamically detects execution environments, scaling down to CPU-safe parameters for development on Intel Iris Xe laptops, while instantly activating PyTorch <code>autocast()</code> and <code>GradScaler</code> to halve VRAM and double training speed when deployed on an RTX 5060 GPU.</li>
+<li><strong>Hardware Fallback &amp; Automatic Mixed Precision (AMP):</strong> Dynamically detects execution environments, scaling down to CPU-safe parameters for development on Intel Iris Xe laptops, while instantly activating PyTorch <code>autocast()</code> and <code>GradScaler</code> to halve VRAM and double training speed when deployed on an RTX 3050 GPU.</li>
 <li><strong>State-of-the-Art Loss Hybridization:</strong> To guarantee the highest possible score, the network runs a massive multi-part loss function:</li>
 <li><strong>BCEWithLogitsLoss:</strong> Anchors the network early to aggressively classify basic road pixels vs background.</li>
 <li><strong>CVPR 2021 soft-clDice:</strong> Refines the binary mask by enforcing strict mathematical connectivity for thin, broken tubular structures.</li>
 <li><strong>CVPR 2018 VGG Topology Loss:</strong> Dynamically spins up a frozen VGG-19 network and matches the deep feature maps of the ground truth and the prediction to inherently force perceptual structural similarity.</li>
 <li><strong>Anti-Overfitting Protocols:</strong> Employs dynamic Data Augmentation (Random Flips) and a Cosine Annealing Learning Rate Scheduler to force deep generalization across 50 epochs.</li>
+</ol>
+<hr />
+<h2>🚀 Quick Start Guide (From Scratch)</h2>
+<p>Follow these steps exactly to run the pipeline from absolute scratch on your GPU machine:</p>
+<ol>
+<li>
+<p><strong>Install Dependencies:</strong>
+   Ensure you have your Python environment activated, then install the PyTorch libraries compiled specifically for the RTX 3050's CUDA capabilities:
+   <code>bash
+   pip install -r requirements.txt</code></p>
+</li>
+<li>
+<p><strong>Download the Data Natively:</strong>
+   Run the autonomous downloader. This bypasses the need for the AWS CLI or manual extraction tools. It will pull the dataset directly into the <code>spacenet_data</code> folder and automatically clean up the heavy tarball. (If your connection drops, just run it again to resume!)
+   <code>bash
+   python download_mumbai.py</code></p>
+</li>
+<li>
+<p><strong>Train Phase 1 (Mumbai):</strong>
+   Initiate the deep learning training loop. This runs for 50 epochs and continuously saves checkpoints.
+   <code>bash
+   python train.py</code></p>
+</li>
+<li>
+<p><strong>Verify / Run Inference:</strong>
+   Once training is complete (or after an epoch finishes), run the inference script to pluck a random image from the dataset, push it through your newly trained neural network, and plot the actual vs predicted road structures.
+   <code>bash
+   python inference.py</code></p>
+</li>
+<li>
+<p><strong>Train Phase 2 (DeepGlobe Transfer Learning):</strong>
+   <em>(Optional)</em> When you are ready to expand beyond SpaceNet, place your DeepGlobe images/masks into the created <code>deepglobe</code> directory and run the secondary script. This automatically loads your Mumbai weights and fine-tunes them!
+   <code>bash
+   python train2.py</code></p>
+</li>
 </ol>
 
     <!-- Mermaid library to render the flowchart -->

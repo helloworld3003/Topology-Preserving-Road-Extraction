@@ -1,9 +1,9 @@
 # ==========================================
-# GPU ACCELERATION (RTX 5060 - Ada Lovelace)
+# GPU ACCELERATION (RTX 3050)
 # ==========================================
-# The RTX 5060 requires cutting-edge CUDA versions (13.2+). 
+# The RTX 3050 requires cutting-edge CUDA versions (11.8+ or 13.2+). 
 # This extra-index-url ensures pip pulls the CUDA 13.2 compiled binaries for PyTorch
-# so it can properly detect and utilize your RTX 5060's latest architecture!
+# so it can properly detect and utilize your RTX 3050's Tensor Cores!
 --extra-index-url https://download.pytorch.org/whl/cu132
 
 torch>=2.1.0
