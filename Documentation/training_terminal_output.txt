@@ -1,38 +1,80 @@
-========== PHASE 1: TRAINING ON MUMBAI ==========
-[*] Initializing Training Pipeline...
-[*] Target Device: cpu
-[!] WARNING: Running on CPU. Training will be slow. Adjust batch_size if RAM spikes.
-[*] Loading SpaceNet 5 for AOIs: [8]
-[*] Dataset size: 1016 samples. Batches per epoch: 508
-    Batch 508/508 | Loss: 0.9582
-Epoch 1/10 | Average Loss: 0.9433
-    [+] Model checkpoint saved to mumbai_road_model.pth
-    Batch 508/508 | Loss: 0.9122
-Epoch 2/10 | Average Loss: 0.9239
-    [+] Model checkpoint saved to mumbai_road_model.pth
-    Batch 508/508 | Loss: 0.8983
-Epoch 3/10 | Average Loss: 0.9137
-    [+] Model checkpoint saved to mumbai_road_model.pth
-    Batch 508/508 | Loss: 0.8720
-Epoch 4/10 | Average Loss: 0.9083
-    [+] Model checkpoint saved to mumbai_road_model.pth
-    Batch 508/508 | Loss: 0.8848
-Epoch 5/10 | Average Loss: 0.9017
-    [+] Model checkpoint saved to mumbai_road_model.pth
-    Batch 508/508 | Loss: 0.8821
-Epoch 6/10 | Average Loss: 0.8912
-    [+] Model checkpoint saved to mumbai_road_model.pth
-    Batch 508/508 | Loss: 0.7752
-Epoch 7/10 | Average Loss: 0.8788
-    [+] Model checkpoint saved to mumbai_road_model.pth
-    Batch 508/508 | Loss: 0.8324
-Epoch 8/10 | Average Loss: 0.8762
-    [+] Model checkpoint saved to mumbai_road_model.pth
-    Batch 508/508 | Loss: 0.8166
-Epoch 9/10 | Average Loss: 0.8735
-    [+] Model checkpoint saved to mumbai_road_model.pth
-    Batch 508/508 | Loss: 0.9963
-Epoch 10/10 | Average Loss: 0.8772
-    [+] Model checkpoint saved to mumbai_road_model.pth
 
-[*] Training completely finished!
+========== DEEPGLOBE TRANSFER LEARNING ==========
+[*] Initializing DeepGlobe Training Pipeline...
+[*] Target Device: cuda
+[+] NVIDIA GPU Detected! AMP (Mixed Precision) Enabled.
+[*] Loading DeepGlobe from: /content/Topology-Preserving-Road-Extraction/archive/train
+[*] Loading VGG-19 for CVPR 2018 Perceptual Topology Loss...
+/content/Topology-Preserving-Road-Extraction/train2.py:179: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=(device.type == 'cuda'))
+/content/Topology-Preserving-Road-Extraction/train2.py:204: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=(device.type == 'cuda')):
+    Batch 3113/3113 | Total Loss: 0.7562
+Epoch 1/50 | Avg Loss: 0.8768 | LR: 0.000100
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.6545
+Epoch 2/50 | Avg Loss: 0.7184 | LR: 0.000100
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.7108
+Epoch 3/50 | Avg Loss: 0.6767 | LR: 0.000100
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 1.0118
+Epoch 4/50 | Avg Loss: 0.6584 | LR: 0.000099
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.5122
+Epoch 5/50 | Avg Loss: 0.6321 | LR: 0.000098
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 1.0211
+Epoch 6/50 | Avg Loss: 0.6188 | LR: 0.000098
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.2764
+Epoch 7/50 | Avg Loss: 0.6113 | LR: 0.000097
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.3407
+Epoch 8/50 | Avg Loss: 0.6051 | LR: 0.000095
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.2565
+Epoch 9/50 | Avg Loss: 0.5908 | LR: 0.000094
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.5753
+Epoch 10/50 | Avg Loss: 0.5743 | LR: 0.000092
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 1.0447
+Epoch 11/50 | Avg Loss: 0.5830 | LR: 0.000091
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.6322
+Epoch 12/50 | Avg Loss: 0.5723 | LR: 0.000089
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.8441
+Epoch 13/50 | Avg Loss: 0.5571 | LR: 0.000087
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+
+Epoch 14/50 | Avg Loss: 0.5497 | LR: 0.000084
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.2115
+Epoch 15/50 | Avg Loss: 0.5495 | LR: 0.000082
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.6046
+Epoch 16/50 | Avg Loss: 0.5366 | LR: 0.000080
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.5897
+Epoch 17/50 | Avg Loss: 0.5277 | LR: 0.000077
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.8930
+Epoch 18/50 | Avg Loss: 0.5274 | LR: 0.000074
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.5804
+Epoch 19/50 | Avg Loss: 0.5169 | LR: 0.000072
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.8907
+Epoch 20/50 | Avg Loss: 0.5108 | LR: 0.000069
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.4365
+Epoch 21/50 | Avg Loss: 0.5068 | LR: 0.000066
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.1296
+Epoch 22/50 | Avg Loss: 0.4966 | LR: 0.000063
+    [+] Model checkpoint saved to deepglobe_road_model.pth
+    Batch 3113/3113 | Total Loss: 0.1624
+Epoch 23/50 | Avg Loss: 0.5016 | LR: 0.000060
+    [+] Model checkpoint saved to deepglobe_road_model.pth
