@@ -158,7 +158,7 @@ def train_loop(aois=[8], batch_size=2, epochs=50, load_weights=None, save_weight
         vgg_topology_loss_fn = VGGTopologyLoss(device=device)
 
     # AMP Scaler for lightning-fast GPU training
-    scaler = torch.cuda.amp.GradScaler(enabled=(device.type == 'cuda'))
+    scaler = torch.amp.GradScaler('cuda', enabled=(device.type == 'cuda'))
 
     for epoch in range(epochs):
         model.train()
@@ -198,7 +198,7 @@ def train_loop(aois=[8], batch_size=2, epochs=50, load_weights=None, save_weight
             optimizer.zero_grad(set_to_none=True)
             
             # --- FORWARD PASS (WITH AMP) ---
-            with torch.cuda.amp.autocast(enabled=(device.type == 'cuda')):
+            with torch.amp.autocast('cuda', enabled=(device.type == 'cuda')):
                 logits = model(images)
                 
                 # BCE needs raw logits (pre-sigmoid) for mathematical stability
@@ -223,7 +223,7 @@ def train_loop(aois=[8], batch_size=2, epochs=50, load_weights=None, save_weight
             scaler.update()
             
             epoch_loss += total_loss.item()
-            print(f"    Batch {batch_idx+1}/{len(dataloader)} | Total Loss: {total_loss.item():.4f}", end='\r')
+            print(f"    Batch {batch_idx+1}/{len(dataloader)} | Total Loss: {total_loss.item():.4f}", end='\r', flush=True)
                 
         avg_loss = epoch_loss / len(dataloader)
         current_lr = optimizer.param_groups[0]['lr']
