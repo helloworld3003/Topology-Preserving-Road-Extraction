@@ -2,9 +2,10 @@ import os
 import random
 import torch
 import matplotlib.pyplot as plt
-from torchgeo.datasets import SpaceNet5
 import torchvision.transforms.functional as TF
 import segmentation_models_pytorch as smp
+import glob
+from PIL import Image
 
 # ---------------------------------------------------------
 # 1. Initialize Identical Model Architecture
@@ -22,7 +23,7 @@ def get_model():
 # ---------------------------------------------------------
 # 2. Inference & Visualization Logic
 # ---------------------------------------------------------
-def visualize_prediction(model_path="mumbai_road_model.pth"):
+def visualize_prediction(model_path="deepglobe_road_model.pth"):
     print("\n========== INFERENCE ENGINE ==========")
     print(f"[*] Initializing Pipeline...")
     
@@ -44,24 +45,39 @@ def visualize_prediction(model_path="mumbai_road_model.pth"):
     model.eval() 
     
     # 2. Load a Sample from the Dataset
-    print("[*] Fetching a test image from SpaceNet 5 (Mumbai)...")
-    dataset = SpaceNet5(root="spacenet_data", aois=[8], split="train", download=False)
+    print("[*] Fetching a test image from DeepGlobe (archive/train)...")
     
-    # Pick a random image from the 1000+ available images in Mumbai!
-    random_idx = random.randint(0, len(dataset) - 1)
-    sample = dataset[random_idx] 
-    print(f"[*] Fetched Image #{random_idx}")
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archive", "train")
+    all_images = sorted(glob.glob(os.path.join(data_dir, "*_sat.jpg")))
     
-    # 3. Preprocess exactly like train.py
-    image = sample['image'].float().unsqueeze(0) # Add batch dimension: [1, 8, 325, 325]
-    mask_true = sample['mask'].float()           # [325, 325]
+    if not all_images:
+        print(f"[!] ERROR: No DeepGlobe *_sat.jpg images found in {data_dir}")
+        return
+        
+    # Pick a random DeepGlobe image
+    random_idx = random.randint(0, len(all_images) - 1)
+    img_path = all_images[random_idx]
+    mask_path = img_path.replace("_sat.jpg", "_mask.png")
     
-    # Slice RGB (Channels 4, 2, 1)
-    image_rgb = image[:, [4, 2, 1], :, :]
+    print(f"[*] Fetched Image: {os.path.basename(img_path)}")
+    
+    # Load with PIL exactly like train2.py
+    image_pil = Image.open(img_path).convert("RGB")
+    mask_pil = Image.open(mask_path).convert("L") if os.path.exists(mask_path) else None
+    
+    image = TF.to_tensor(image_pil).unsqueeze(0) # [1, 3, H, W]
+    
+    # DeepGlobe images are native RGB, so NO channel slicing needed like SpaceNet!
+    image_rgb = image 
     
     # Center Crop to 320x320
     image_rgb = TF.center_crop(image_rgb, [320, 320])
-    mask_true = TF.center_crop(mask_true, [320, 320])
+    
+    if mask_pil is not None:
+        mask_true = TF.to_tensor(mask_pil)
+        mask_true = TF.center_crop(mask_true, [320, 320])
+    else:
+        mask_true = torch.zeros((1, 320, 320))
     
     # --- CRITICAL FIX: Image Normalization ---
     batch_min = image_rgb.amin(dim=(1, 2, 3), keepdim=True)
