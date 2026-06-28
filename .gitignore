@@ -10,6 +10,7 @@ env/
 # Dataset Directories (Do not upload 1000s of images to GitHub!)
 spacenet_data/
 deepglobe/
+archive/
 *.zip
 *.geojsonl
 

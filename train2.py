@@ -14,17 +14,25 @@ import segmentation_models_pytorch as smp
 # 1. Custom Dataset for DeepGlobe (RGB .jpg and .png masks)
 # ---------------------------------------------------------
 class DeepGlobeDataset(Dataset):
-    def __init__(self, image_dir, mask_dir):
-        self.image_dir = image_dir
-        self.mask_dir = mask_dir
+    def __init__(self, data_dir):
+        """
+        Assumes data_dir contains both the images and masks with the naming convention:
+        [id]_sat.jpg and [id]_mask.png
+        """
+        self.data_dir = data_dir
         
-        self.images = sorted(glob.glob(os.path.join(image_dir, "*.jpg")))
-        self.masks = sorted(glob.glob(os.path.join(mask_dir, "*.png")))
+        # Grab all *_sat.jpg files in the directory
+        self.images = sorted(glob.glob(os.path.join(data_dir, "*_sat.jpg")))
         
-        if len(self.images) == 0 and os.path.exists(image_dir):
-            print(f"[!] Warning: No .jpg files found in {image_dir}")
-        elif len(self.images) != len(self.masks):
-            print(f"[!] Warning: Number of images ({len(self.images)}) does not match masks ({len(self.masks)})!")
+        # Build the mask paths by replacing _sat.jpg with _mask.png
+        self.masks = [img_path.replace("_sat.jpg", "_mask.png") for img_path in self.images]
+        
+        if len(self.images) == 0 and os.path.exists(data_dir):
+            print(f"[!] Warning: No *_sat.jpg files found in {data_dir}")
+        elif len(self.images) > 0:
+            # Just verify the first mask exists to ensure the naming convention holds
+            if not os.path.exists(self.masks[0]):
+                print(f"[!] Warning: Mask not found for {self.images[0]}. Expected {self.masks[0]}")
 
     def __len__(self):
         return len(self.images)
@@ -132,7 +140,7 @@ class SoftClDiceLoss(nn.Module):
 # ---------------------------------------------------------
 # 4. Training Loop Integration
 # ---------------------------------------------------------
-def train_loop(image_dir, mask_dir, batch_size=2, epochs=50, load_weights=None, save_weights="model_weights.pth"):
+def train_loop(data_dir, batch_size=2, epochs=50, load_weights=None, save_weights="model_weights.pth"):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[*] Initializing DeepGlobe Training Pipeline...")
     print(f"[*] Target Device: {device}")
@@ -142,11 +150,11 @@ def train_loop(image_dir, mask_dir, batch_size=2, epochs=50, load_weights=None, 
     else:
         print("[+] NVIDIA GPU Detected! AMP (Mixed Precision) Enabled.")
     
-    print(f"[*] Loading DeepGlobe from: {image_dir}")
-    dataset = DeepGlobeDataset(image_dir, mask_dir)
+    print(f"[*] Loading DeepGlobe from: {data_dir}")
+    dataset = DeepGlobeDataset(data_dir)
     
     if len(dataset) == 0:
-        print("[!] Error: Dataset is empty. Place your DeepGlobe .jpg files and .png masks in the folders!")
+        print("[!] Error: Dataset is empty. Check your DeepGlobe extracted folders!")
         return
         
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
@@ -224,18 +232,17 @@ def train_loop(image_dir, mask_dir, batch_size=2, epochs=50, load_weights=None, 
     print("\n[*] Training completely finished!")
 
 if __name__ == "__main__":
-    DEEPGLOBE_IMAGES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "deepglobe", "images")
-    DEEPGLOBE_MASKS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "deepglobe", "masks")
+    # The user extracted DeepGlobe into a 'train' folder and then moved it into 'archive'
+    DEEPGLOBE_TRAIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archive", "train")
     
-    os.makedirs(DEEPGLOBE_IMAGES, exist_ok=True)
-    os.makedirs(DEEPGLOBE_MASKS, exist_ok=True)
-    
-    print("\n========== DEEPGLOBE TRANSFER LEARNING ==========")
-    train_loop(
-        image_dir=DEEPGLOBE_IMAGES,
-        mask_dir=DEEPGLOBE_MASKS,
-        batch_size=2, # Bump to 8 on GPU!
-        epochs=50,
-        # load_weights="mumbai_road_model.pth",      
-        save_weights="deepglobe_road_model.pth"    
-    )
+    if not os.path.exists(DEEPGLOBE_TRAIN_DIR):
+        print(f"[!] Error: The folder {DEEPGLOBE_TRAIN_DIR} does not exist.")
+    else:
+        print("\n========== DEEPGLOBE TRANSFER LEARNING ==========")
+        train_loop(
+            data_dir=DEEPGLOBE_TRAIN_DIR,
+            batch_size=2, # Bump to 8 on GPU!
+            epochs=50,
+            # load_weights="mumbai_road_model.pth",      
+            save_weights="deepglobe_road_model.pth"    
+        )
