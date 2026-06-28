@@ -242,7 +242,7 @@ if __name__ == "__main__":
     train_loop(
         aois=[8], 
         # When you switch to your RTX 3050, AMP cuts memory in half, so bump this to 4 or 8!
-        batch_size=2, 
+        batch_size=4, 
         epochs=50,
         # load_weights="mumbai_road_model.pth", 
         save_weights="mumbai_road_model.pth"
