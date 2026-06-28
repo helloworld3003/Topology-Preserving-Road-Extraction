@@ -4,7 +4,7 @@ venv/
 env/
 
 # PyTorch Model Checkpoints (Massive file sizes)
-*.pth
+# *.pth
 *.pt
 
 # Dataset Directories (Do not upload 1000s of images to GitHub!)
