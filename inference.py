@@ -94,7 +94,7 @@ def visualize_prediction(model_path="deepglobe_road_model.pth"):
         
     # Extract tensors for plotting
     prediction = prediction.squeeze().cpu().numpy()
-    mask_true = mask_true.cpu().numpy()
+    mask_true = mask_true.squeeze().cpu().numpy()
     
     # Convert image for matplotlib (Requires [H, W, C] format, normalized 0-1)
     img_display = image_rgb.squeeze().permute(1, 2, 0).cpu().numpy()
