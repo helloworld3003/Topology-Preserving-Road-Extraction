@@ -1,0 +1,27 @@
+# ==========================================
+# GPU ACCELERATION (RTX 5060 - Ada Lovelace)
+# ==========================================
+# The RTX 5060 requires cutting-edge CUDA versions (13.2+). 
+# This extra-index-url ensures pip pulls the CUDA 13.2 compiled binaries for PyTorch
+# so it can properly detect and utilize your RTX 5060's latest architecture!
+--extra-index-url https://download.pytorch.org/whl/cu132
+
+torch>=2.1.0
+torchvision>=0.16.0
+torchaudio>=2.1.0
+
+# ==========================================
+# MACHINE LEARNING LIBRARIES
+# ==========================================
+# UNet++ and other advanced architectures
+segmentation-models-pytorch>=0.3.3
+
+# Geospatial dataset loaders (SpaceNet, etc.)
+torchgeo>=0.5.0
+
+# ==========================================
+# IMAGE PROCESSING & UTILS
+# ==========================================
+Pillow>=9.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0

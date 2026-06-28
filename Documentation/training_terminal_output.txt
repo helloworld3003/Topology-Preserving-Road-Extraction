@@ -1,0 +1,38 @@
+========== PHASE 1: TRAINING ON MUMBAI ==========
+[*] Initializing Training Pipeline...
+[*] Target Device: cpu
+[!] WARNING: Running on CPU. Training will be slow. Adjust batch_size if RAM spikes.
+[*] Loading SpaceNet 5 for AOIs: [8]
+[*] Dataset size: 1016 samples. Batches per epoch: 508
+    Batch 508/508 | Loss: 0.9582
+Epoch 1/10 | Average Loss: 0.9433
+    [+] Model checkpoint saved to mumbai_road_model.pth
+    Batch 508/508 | Loss: 0.9122
+Epoch 2/10 | Average Loss: 0.9239
+    [+] Model checkpoint saved to mumbai_road_model.pth
+    Batch 508/508 | Loss: 0.8983
+Epoch 3/10 | Average Loss: 0.9137
+    [+] Model checkpoint saved to mumbai_road_model.pth
+    Batch 508/508 | Loss: 0.8720
+Epoch 4/10 | Average Loss: 0.9083
+    [+] Model checkpoint saved to mumbai_road_model.pth
+    Batch 508/508 | Loss: 0.8848
+Epoch 5/10 | Average Loss: 0.9017
+    [+] Model checkpoint saved to mumbai_road_model.pth
+    Batch 508/508 | Loss: 0.8821
+Epoch 6/10 | Average Loss: 0.8912
+    [+] Model checkpoint saved to mumbai_road_model.pth
+    Batch 508/508 | Loss: 0.7752
+Epoch 7/10 | Average Loss: 0.8788
+    [+] Model checkpoint saved to mumbai_road_model.pth
+    Batch 508/508 | Loss: 0.8324
+Epoch 8/10 | Average Loss: 0.8762
+    [+] Model checkpoint saved to mumbai_road_model.pth
+    Batch 508/508 | Loss: 0.8166
+Epoch 9/10 | Average Loss: 0.8735
+    [+] Model checkpoint saved to mumbai_road_model.pth
+    Batch 508/508 | Loss: 0.9963
+Epoch 10/10 | Average Loss: 0.8772
+    [+] Model checkpoint saved to mumbai_road_model.pth
+
+[*] Training completely finished!

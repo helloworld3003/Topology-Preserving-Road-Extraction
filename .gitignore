@@ -1,0 +1,26 @@
+# Python Virtual Environment
+route_env/
+venv/
+env/
+
+# PyTorch Model Checkpoints (Massive file sizes)
+*.pth
+*.pt
+
+# Dataset Directories (Do not upload 1000s of images to GitHub!)
+spacenet_data/
+deepglobe/
+*.zip
+*.geojsonl
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE and OS Files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+data.py
