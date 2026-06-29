@@ -23,8 +23,8 @@ def get_model():
 # ---------------------------------------------------------
 # 2. Inference & Visualization Logic
 # ---------------------------------------------------------
-def visualize_prediction(model_path="deepglobe_road_model.pth"):
-    print("\n========== INFERENCE ENGINE ==========")
+def visualize_prediction(model_path="mumbai_finetuned_model.pth"):
+    print("\n========== INFERENCE ENGINE ==========") 
     print(f"[*] Initializing Pipeline...")
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

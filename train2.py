@@ -241,8 +241,9 @@ if __name__ == "__main__":
         print("\n========== DEEPGLOBE TRANSFER LEARNING ==========")
         train_loop(
             data_dir=DEEPGLOBE_TRAIN_DIR,
-            batch_size=2, # Bump to 8 on GPU!
-            epochs=50,
-            # load_weights="mumbai_road_model.pth",      
-            save_weights="deepglobe_road_model.pth"    
+            batch_size=8, # Bump to 8 on GPU!
+            epochs=35, 
+            load_weights="deepglobe_road_model.pth",      
+            save_weights="deepglobe_finetuned_model.pth"    
         )
+ 

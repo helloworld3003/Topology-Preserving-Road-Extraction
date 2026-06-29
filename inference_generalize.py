@@ -21,7 +21,7 @@ def get_model():
 # ---------------------------------------------------------
 # 2. Generalization Inference Logic
 # ---------------------------------------------------------
-def test_generalization(model_path="deepglobe_road_model.pth"):
+def test_generalization(model_path="mumbai_finetuned_model.pth"):
     print("\n========== CROSS-DATASET GENERALIZATION TEST ==========")
     print(f"[*] Testing how well the DeepGlobe-trained model performs on SpaceNet 5 data!")
     
