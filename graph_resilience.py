@@ -206,7 +206,7 @@ if __name__ == "__main__":
     
     # NOTE: To test this locally, place a valid satellite image and its corresponding mask here.
     # For now, this is a template block ready for your specific image paths.
-    img=4227
+    img=5668
     test_img_path = "archive/train/"+str(img)+"_sat.jpg"   # Adjust to an actual image you want to test
     test_mask_path = "archive/train/"+str(img)+"_mask.png" # Adjust to the prediction or ground truth mask
     
