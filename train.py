@@ -241,9 +241,11 @@ if __name__ == "__main__":
     print("\n========== PHASE 3: TRANSFER LEARNING ON MUMBAI ==========")
     train_loop(
         aois=[8], 
-        # When you switch to your RTX 3050, AMP cuts memory in half, so bump this to 4 or 8!
-        batch_size=4, 
+        # Since Colab T4 GPU has 15 GB of VRAM, and batch_size=4 only uses 3.1 GB, 
+        # we can safely quadruple it to 16 to drastically speed up epoch times!
+        batch_size=16, 
         epochs=50,
-        load_weights="deepglobe_road_model.pth", 
+        # load_weights="deepglobe_road_model.pth", 
+        load_weights="mumbai_finetuned_model.pth", 
         save_weights="mumbai_finetuned_model.pth"
     )
