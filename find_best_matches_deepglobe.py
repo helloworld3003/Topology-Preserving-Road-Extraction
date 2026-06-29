@@ -59,7 +59,7 @@ def calculate_iou(pred, target):
 # ---------------------------------------------------------
 # 3. Main Scanning Function
 # ---------------------------------------------------------
-def find_best_matches_deepglobe(model_path="deepglobe_finetuned_model.pth", data_dir="archive/train", num_images_to_scan=10000, top_k=20):
+def find_best_matches_deepglobe(model_path="deepglobe_finetuned_model.pth", data_dir="archive/train", num_images_to_scan=10000, top_k=50):
     print("\n========== CHERRY-PICKING THE BEST MATCHES (DEEPGLOBE) ==========")
     print(f"[*] Scanning {num_images_to_scan} random DeepGlobe images...")
     
