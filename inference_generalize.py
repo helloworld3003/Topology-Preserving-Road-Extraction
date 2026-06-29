@@ -79,7 +79,7 @@ def test_generalization(model_path="mumbai_finetuned_model.pth"):
     img_display = image_rgb.squeeze().permute(1, 2, 0).cpu().numpy()
     img_display = (img_display - img_display.min()) / (img_display.max() - img_display.min())
     
-    prediction_thresholded = (prediction > 0.5).astype(float)
+    prediction_thresholded = (prediction > 0.25).astype(float)
     
     # 5. Plotting
     print("[*] Generating Visualization...")

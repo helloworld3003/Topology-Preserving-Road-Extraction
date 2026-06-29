@@ -267,3 +267,164 @@ Epoch 50/50 | Avg Loss: 0.8317 | LR: 0.000001
     [+] Model checkpoint saved to mumbai_finetuned_model.pth
 
 [*] Training completely finished!
+
+
+
+========== PHASE 3: TRANSFER LEARNING ON MUMBAI ==========
+[*] Initializing Training Pipeline...
+[*] Target Device: cuda
+[+] NVIDIA GPU Detected! AMP (Mixed Precision) Enabled.
+[*] Loading pre-trained weights from: mumbai_finetuned_model.pth
+[*] Loading VGG-19 for CVPR 2018 Perceptual Topology Loss...
+    Batch 63/63 | Total Loss: 0.8659
+Epoch 1/50 | Avg Loss: 0.8613 | LR: 0.000100
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8600
+Epoch 2/50 | Avg Loss: 0.8633 | LR: 0.000100
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.9187
+Epoch 3/50 | Avg Loss: 0.8641 | LR: 0.000100
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8843
+Epoch 4/50 | Avg Loss: 0.8560 | LR: 0.000099
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8803
+Epoch 5/50 | Avg Loss: 0.8566 | LR: 0.000098
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8547
+Epoch 6/50 | Avg Loss: 0.8478 | LR: 0.000098
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8679
+Epoch 7/50 | Avg Loss: 0.8457 | LR: 0.000097
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7519
+Epoch 8/50 | Avg Loss: 0.8437 | LR: 0.000095
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8103
+Epoch 9/50 | Avg Loss: 0.8399 | LR: 0.000094
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7699
+Epoch 10/50 | Avg Loss: 0.8342 | LR: 0.000092
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7892
+Epoch 11/50 | Avg Loss: 0.8319 | LR: 0.000091
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.9014
+Epoch 12/50 | Avg Loss: 0.8300 | LR: 0.000089
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7311
+Epoch 13/50 | Avg Loss: 0.8262 | LR: 0.000087
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7998
+Epoch 14/50 | Avg Loss: 0.8166 | LR: 0.000084
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6342
+Epoch 15/50 | Avg Loss: 0.8223 | LR: 0.000082
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7503
+Epoch 16/50 | Avg Loss: 0.8089 | LR: 0.000080
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8697
+Epoch 17/50 | Avg Loss: 0.8077 | LR: 0.000077
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7097
+Epoch 18/50 | Avg Loss: 0.7999 | LR: 0.000074
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8220
+Epoch 19/50 | Avg Loss: 0.7976 | LR: 0.000072
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8981
+Epoch 20/50 | Avg Loss: 0.7913 | LR: 0.000069
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7417
+Epoch 21/50 | Avg Loss: 0.7860 | LR: 0.000066
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7995
+Epoch 22/50 | Avg Loss: 0.7770 | LR: 0.000063
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7859
+Epoch 23/50 | Avg Loss: 0.7814 | LR: 0.000060
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6204
+Epoch 24/50 | Avg Loss: 0.7704 | LR: 0.000057
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8150
+Epoch 25/50 | Avg Loss: 0.7726 | LR: 0.000054
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8101
+Epoch 26/50 | Avg Loss: 0.7658 | LR: 0.000050
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7735
+Epoch 27/50 | Avg Loss: 0.7623 | LR: 0.000047
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6854
+Epoch 28/50 | Avg Loss: 0.7555 | LR: 0.000044
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7160
+Epoch 29/50 | Avg Loss: 0.7516 | LR: 0.000041
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7334
+Epoch 30/50 | Avg Loss: 0.7466 | LR: 0.000038
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6643
+Epoch 31/50 | Avg Loss: 0.7414 | LR: 0.000035
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6911
+Epoch 32/50 | Avg Loss: 0.7421 | LR: 0.000032
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7619
+Epoch 33/50 | Avg Loss: 0.7403 | LR: 0.000029
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6202
+Epoch 34/50 | Avg Loss: 0.7362 | LR: 0.000027
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6398
+Epoch 35/50 | Avg Loss: 0.7276 | LR: 0.000024
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7415
+Epoch 36/50 | Avg Loss: 0.7282 | LR: 0.000021
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6372
+Epoch 37/50 | Avg Loss: 0.7251 | LR: 0.000019
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6840
+Epoch 38/50 | Avg Loss: 0.7195 | LR: 0.000017
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6952
+Epoch 39/50 | Avg Loss: 0.7213 | LR: 0.000014
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7568
+Epoch 40/50 | Avg Loss: 0.7159 | LR: 0.000012
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7310
+Epoch 41/50 | Avg Loss: 0.7135 | LR: 0.000010
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6804
+Epoch 42/50 | Avg Loss: 0.7138 | LR: 0.000009
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7449
+Epoch 43/50 | Avg Loss: 0.7102 | LR: 0.000007
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6990
+Epoch 44/50 | Avg Loss: 0.7137 | LR: 0.000006
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7196
+Epoch 45/50 | Avg Loss: 0.7153 | LR: 0.000004
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.6669
+Epoch 46/50 | Avg Loss: 0.7098 | LR: 0.000003
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.8027
+Epoch 47/50 | Avg Loss: 0.7124 | LR: 0.000003
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7121
+Epoch 48/50 | Avg Loss: 0.7143 | LR: 0.000002
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7223
+Epoch 49/50 | Avg Loss: 0.7050 | LR: 0.000001
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+    Batch 63/63 | Total Loss: 0.7432
+Epoch 50/50 | Avg Loss: 0.7060 | LR: 0.000001
+    [+] Model checkpoint saved to mumbai_finetuned_model.pth
+
+[*] Training completely finished!
