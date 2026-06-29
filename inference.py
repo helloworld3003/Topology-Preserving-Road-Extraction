@@ -23,7 +23,7 @@ def get_model():
 # ---------------------------------------------------------
 # 2. Inference & Visualization Logic
 # ---------------------------------------------------------
-def visualize_prediction(model_path="mumbai_finetuned_model.pth"):
+def visualize_prediction(model_path="deepglobe_finetuned_model.pth"):
     print("\n========== INFERENCE ENGINE ==========") 
     print(f"[*] Initializing Pipeline...")
     
@@ -104,7 +104,7 @@ def visualize_prediction(model_path="mumbai_finetuned_model.pth"):
     
     # 5. Apply a threshold 
     # The model outputs a probability (0.0 to 1.0). If it's over 50% sure it's a road, we keep it!
-    prediction_thresholded = (prediction > 0.5).astype(float)
+    prediction_thresholded = (prediction > 0.25).astype(float)
     
     # 6. Plotting
     print("[*] Generating Visualization...")

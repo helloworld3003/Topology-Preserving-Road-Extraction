@@ -101,7 +101,7 @@ def find_best_matches(model_path="mumbai_finetuned_model.pth", num_images_to_sca
         print(f"    Scanned {count+1}/{num_images_to_scan} (IoU: {iou:.4f})", end='\r')
         
     print("\n\n[*] Sorting to find the absolute best matches...")
-    results.sort(key=lambda x: x['iou'], reverse=True)
+    results.sort(key=lambda x: x['iou'], reverse=False)
     
     os.makedirs("Documentation", exist_ok=True)
     
@@ -135,4 +135,4 @@ def find_best_matches(model_path="mumbai_finetuned_model.pth", num_images_to_sca
 
 if __name__ == "__main__":
     # Scans 200 random images and saves the top 5 absolute best matches for the presentation!
-    find_best_matches(model_path="mumbai_finetuned_model.pth", num_images_to_scan=2000, top_k=20)
+    find_best_matches(model_path="mumbai_finetuned_model.pth", num_images_to_scan=1100, top_k=20)
