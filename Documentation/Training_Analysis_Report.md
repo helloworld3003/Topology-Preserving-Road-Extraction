@@ -7,6 +7,42 @@ By leveraging a custom **ResNet50 Unet++** architecture with a hybrid **clDice +
 
 ---
 
+## 📈 Unique Pipeline Architecture
+
+![System Architecture](architecture_diagram_v2.svg)
+
+```mermaid
+flowchart TD
+    %% Define Styles
+    classDef pretrain fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#01579b
+    classDef transfer fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#1b5e20
+    classDef event fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100,stroke-dasharray: 5 5
+
+    subgraph Phase 1: Base Intelligence [DeepGlobe Pre-Training]
+        direction TB
+        A[Phase 1.1: Initial Convergence<br/>Loss: 0.87 ➔ 0.50]:::pretrain
+        B([Warm Restart #1<br/>LR Spike to 0.0001]):::event
+        C[Phase 1.2: Fine-Tuning<br/>Loss: 0.39 ➔ 0.29]:::pretrain
+        
+        A --> B --> C
+    end
+
+    subgraph Phase 2: Domain Adaptation [SpaceNet 5 Mumbai]
+        direction TB
+        D[Phase 2.1 & 2.2: The Domain Shock<br/>Loss: 1.20 ➔ 0.83]:::transfer
+        E([Warm Restart #2<br/>LR Spike to 0.0001]):::event
+        F[Phase 2.3: Breakthrough<br/>Loss: 0.86 ➔ 0.70]:::transfer
+        G([Warm Restart #3<br/>LR Spike to 0.0001]):::event
+        H[Phase 2.4: Final Polish<br/>Loss: 0.74 ➔ 0.63]:::transfer
+        
+        D --> E --> F --> G --> H
+    end
+
+    C ==>|Transfer Learning Weights| D
+```
+
+---
+
 ## Part 1: DeepGlobe Pre-Training (Base Intelligence)
 The goal of this phase was to teach the neural network the fundamental visual concept of a "road" using clear, high-resolution imagery.
 

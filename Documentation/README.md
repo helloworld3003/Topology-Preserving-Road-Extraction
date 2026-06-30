@@ -19,8 +19,16 @@ flowchart TB
     
     subgraph Neural_Architecture [Neural Architecture]
         direction LR
-        G[UNet++ ResNet50 Backbone] -->|AMP autocast| H[Raw Logits]
+        TL[DeepGlobe Pretrained Weights] -.-> G[UNet++ ResNet50 Backbone]
+        G -->|AMP autocast| H[Raw Logits]
         H -->|Sigmoid| H2[Binary Road Mask]
+    end
+    
+    subgraph Post_Processing [Post-Processing]
+        direction LR
+        H2 --> J1[Endpoint Detection]
+        J1 --> J2[A* Gap Bridging]
+        J2 --> J3[Final Connected Mask]
     end
     
     subgraph Topological_Optimization [Hybrid Loss Optimization]
@@ -34,8 +42,8 @@ flowchart TB
     %% External links connecting the subgraphs
     Z --> G
     H --> I1
-    H2 --> I2
-    H2 --> I3
+    J3 --> I2
+    J3 --> I3
 ```
 
 ---
@@ -73,7 +81,8 @@ The final **`soft-clDice`** score is the harmonic mean of $T_{prec}$ and $T_{sen
    * **BCEWithLogitsLoss:** Anchors the network early to aggressively classify basic road pixels vs background.
    * **CVPR 2021 soft-clDice:** Refines the binary mask by enforcing strict mathematical connectivity for thin, broken tubular structures.
    * **CVPR 2018 VGG Topology Loss:** Dynamically spins up a frozen VGG-19 network and matches the deep feature maps of the ground truth and the prediction to inherently force perceptual structural similarity.
-6. **Anti-Overfitting Protocols:** Employs dynamic Data Augmentation (Random Flips) and a Cosine Annealing Learning Rate Scheduler to force deep generalization across 50 epochs.
+6. **Anti-Overfitting Protocols:** Employs dynamic Data Augmentation (Random Flips) and a Cosine Annealing Learning Rate Scheduler to force deep generalization across epochs.
+7. **Algorithmic Gap Bridging (Post-Processing):** Features a dedicated algorithm (`bridge_gaps.py`) that uses skeletonization and endpoint detection to automatically draw mathematically precise A* shortest-path lines between disconnected road fragments, guaranteeing continuous topologies.
 
 ---
 
@@ -93,20 +102,21 @@ Follow these steps exactly to run the pipeline from absolute scratch on your GPU
    python download_mumbai.py
    ```
 
-3. **Train Phase 1 (Mumbai):**
-   Initiate the deep learning training loop. This runs for 50 epochs and continuously saves checkpoints.
+3. **Train Phase 1 (DeepGlobe Pretraining):**
+   Initiate the deep learning training loop on the DeepGlobe dataset to generate foundational road extraction weights.
+   ```bash
+   python train2.py
+   ```
+
+4. **Train Phase 2 (SpaceNet Transfer Learning):**
+   Transfer the learned features from DeepGlobe and fine-tune them on the SpaceNet 5 (Mumbai) multispectral imagery.
    ```bash
    python train.py
    ```
 
-4. **Verify / Run Inference:**
-   Once training is complete (or after an epoch finishes), run the inference script to pluck a random image from the dataset, push it through your newly trained neural network, and plot the actual vs predicted road structures.
+5. **Verify / Run Inference & Gap Bridging:**
+   Once training is complete, run the inference scripts to plot actual vs predicted road structures. You can also run the gap bridging algorithm to seamlessly heal broken road segments!
    ```bash
-   python inference.py
-   ```
-
-5. **Train Phase 2 (DeepGlobe Transfer Learning):**
-   *(Optional)* When you are ready to expand beyond SpaceNet, place your DeepGlobe images/masks into the created `deepglobe` directory and run the secondary script. This automatically loads your Mumbai weights and fine-tunes them!
-   ```bash
-   python train2.py
+   python inference_generalize.py
+   python bridge_gaps.py
    ```
