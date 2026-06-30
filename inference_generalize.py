@@ -22,54 +22,100 @@ def get_model():
 # ---------------------------------------------------------
 # 2. Main Inference Function
 # ---------------------------------------------------------
-def test_generalization(model_path="mumbai_finetuned_model.pth", show_plot=False):
+def test_generalization(model_path="mumbai_finetuned_model.pth", show_plot=False, image_path=None):
     print("\n========== CROSS-DATASET GENERALIZATION TEST ==========")
-    print(f"[*] Testing how well the DeepGlobe-trained model performs on SpaceNet 5 data!")
+    print(f"[*] Testing the model on unseen satellite data!")
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[*] Target Device: {device}")
     
-    # 1. Load Model (Trained on DeepGlobe)
+    # 1. Load Model
     model = get_model()
     if not os.path.exists(model_path):
         print(f"\n[!] ERROR: Cannot find {model_path}!")
-        return
+        return None
         
     print(f"[*] Loading Brain Data from {model_path}...")
     model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
     model.to(device)
     model.eval() 
     
-    # 2. Load a Sample from the SpaceNet 5 (Mumbai) Dataset
-    print("[*] Fetching an unseen test image from SpaceNet 5 (Mumbai)...")
-    dataset = SpaceNet5(root="spacenet_data", aois=[8], split="train", download=False)
-    
-    random_idx = random.randint(0, len(dataset) - 1)
-    sample = dataset[random_idx] 
-    original_tif_path = dataset.images[random_idx]
-    
+    # 2. Load the Image
+    if image_path is None:
+        if "deepglobe" in model_path.lower():
+            print("[*] Fetching a random test image from DeepGlobe (archive/train)...")
+            import glob
+            data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archive", "train")
+            all_images = sorted(glob.glob(os.path.join(data_dir, "*_sat.jpg")))
+            original_tif_path = random.choice(all_images)
+            
+            from skimage import io
+            img_np = io.imread(original_tif_path)
+            image_tensor = torch.from_numpy(img_np.transpose((2, 0, 1))).float()
+        else:
+            print("[*] Fetching a random unseen test image from SpaceNet 5 (Mumbai)...")
+            dataset = SpaceNet5(root="spacenet_data", aois=[8], split="train", download=False)
+            
+            random_idx = random.randint(0, len(dataset) - 1)
+            sample = dataset[random_idx] 
+            original_tif_path = dataset.images[random_idx]
+            image_tensor = sample['image'].float()
+    else:
+        print(f"[*] Loading custom image from {image_path}...")
+        original_tif_path = image_path
+        # Load image via skimage or PIL
+        from skimage import io
+        img_np = io.imread(image_path)
+        # Convert to tensor (C, H, W)
+        if len(img_np.shape) == 2:
+            img_np = np.expand_dims(img_np, axis=-1)
+        image_tensor = torch.from_numpy(img_np.transpose((2, 0, 1))).float()
+
     # Extract chip ID from filename for cleaner logging
     import re
-    chip_match = re.search(r'chip(\d+)', original_tif_path)
-    chip_id = chip_match.group(1) if chip_match else str(random_idx)
+    if "deepglobe" in model_path.lower() and image_path is None:
+        chip_match = re.search(r'(\d+)_sat\.jpg', original_tif_path)
+    else:
+        chip_match = re.search(r'chip(\d+)', original_tif_path)
+    chip_id = chip_match.group(1) if chip_match else "custom"
     
-    print(f"[*] Fetched SpaceNet Image #{chip_id}")
+    print(f"[*] Processing Image #{chip_id}")
     
-    # 3. Preprocess SpaceNet exactly like we did during the Mumbai phase
-    image = sample['image'].float().unsqueeze(0) 
-    mask_true = sample['mask'].float()           
+    image = image_tensor.unsqueeze(0)
     
-    # Slice RGB (Channels 4, 2, 1) for SpaceNet multi-spectral images
-    image_rgb = image[:, [4, 2, 1], :, :]
+    if image_path is None:
+        if "deepglobe" in model_path.lower():
+            mask_path = original_tif_path.replace("_sat.jpg", "_mask.png")
+            from skimage import io
+            mask_np = io.imread(mask_path, as_gray=True)
+            mask_true = torch.from_numpy(mask_np).float().unsqueeze(0)
+        else:
+            mask_true = sample['mask'].float()
+    else:
+        # Create a dummy ground truth mask for custom images
+        mask_true = torch.zeros(1, image.shape[2], image.shape[3])
     
-    # Center Crop to 320x320
-    image_rgb = TF.center_crop(image_rgb, [320, 320])
-    mask_true = TF.center_crop(mask_true, [320, 320])
-    
-    # --- CRITICAL FIX: Spatial Resolution Matching (1.2m -> 0.3m) ---
+    # Slice RGB
+    # SpaceNet MS images have 8 channels. Standard images have 3.
+    if image.shape[1] >= 8:
+        image_rgb = image[:, [4, 2, 1], :, :]
+    elif image.shape[1] >= 3:
+        image_rgb = image[:, :3, :, :]
+    else:
+        image_rgb = image.repeat(1, 3, 1, 1) # Grayscale to RGB
+        
+    # Standardize size
     import torch.nn.functional as F
-    image_rgb = F.interpolate(image_rgb, size=(1280, 1280), mode="bilinear", align_corners=False)
-    
+    if image_path is not None:
+        # For custom uploaded images, gracefully resize to 1024x1024 to prevent UNet dimensionality/OOM errors
+        image_rgb = F.interpolate(image_rgb, size=(1024, 1024), mode="bilinear", align_corners=False)
+    elif "deepglobe" not in model_path.lower():
+        # SpaceNet imagery specific upscaling (320x320 crop -> 1280x1280 upscale)
+        _, _, h, w = image_rgb.shape
+        if h > 1000 or w > 1000:
+            image_rgb = TF.center_crop(image_rgb, [320, 320])
+        image_rgb = F.interpolate(image_rgb, size=(1280, 1280), mode="bilinear", align_corners=False)
+        
     # --- CRITICAL FIX: Image Normalization ---
     batch_min = image_rgb.amin(dim=(1, 2, 3), keepdim=True)
     batch_max = image_rgb.amax(dim=(1, 2, 3), keepdim=True)
@@ -116,8 +162,9 @@ def test_generalization(model_path="mumbai_finetuned_model.pth", show_plot=False
         print("[+] Done! Close the plot window to exit.")
         
     # 6. Save RGB Image and Mask to disk
-    img_save_path = "spacenet_generalize_img.jpg"
-    mask_save_path = "spacenet_generalize_mask.png"
+    os.makedirs("resilience", exist_ok=True)
+    img_save_path = "resilience/spacenet_generalize_img.jpg"
+    mask_save_path = "resilience/spacenet_generalize_mask.png"
     
     img_uint8 = (img_display * 255).astype('uint8')
     mask_uint8 = (prediction_thresholded * 255).astype('uint8')

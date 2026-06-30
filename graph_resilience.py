@@ -49,8 +49,9 @@ def project_graph_to_geo(G, img_width=1024, img_height=1024, img_path=None):
     If a GeoTIFF image is provided, it extracts the exact bounds using rasterio.
     Otherwise, it uses an affine bounding-box transformation over Mumbai, India.
     """
-    LON_MIN, LON_MAX = 72.7692, 73.1165 
-    LAT_MIN, LAT_MAX = 18.8894, 19.3274 
+    # Fallback to a realistic 500m x 500m bounding box in Central Mumbai
+    LON_MIN, LON_MAX = 72.9400, 72.9450 
+    LAT_MIN, LAT_MAX = 19.1050, 19.1100 
     
     if img_path and str(img_path).lower().endswith('.tif'):
         try:
@@ -152,10 +153,39 @@ def simulate_cascading_failure(graph, tolerance=1.5):
         "cascade_steps": cascade_step - 1,
         "initial_components": initial_components,
         "post_components": post_components,
-        "gcc_size_drop_percent": gcc_drop_percentage
+        "initial_gcc": initial_gcc,
+        "post_gcc": post_gcc,
+        "capacity_lost_pct": gcc_drop_percentage
     }
     
     return export_graph, active_graph, metrics
+
+def simulate_random_attack(graph, remove_pct=0.15):
+    import random
+    active_graph = graph.copy()
+    
+    initial_components = nx.number_connected_components(active_graph)
+    initial_gcc = max(len(c) for c in nx.connected_components(active_graph)) if initial_components > 0 else 0
+    
+    nodes = list(active_graph.nodes())
+    if not nodes:
+        return active_graph, {}
+        
+    num_to_remove = max(1, int(len(nodes) * remove_pct))
+    nodes_to_remove = random.sample(nodes, num_to_remove)
+    
+    active_graph.remove_nodes_from(nodes_to_remove)
+    
+    final_components = nx.number_connected_components(active_graph)
+    final_gcc = max(len(c) for c in nx.connected_components(active_graph)) if final_components > 0 else 0
+    
+    cap_lost = 100.0 * (initial_gcc - final_gcc) / initial_gcc if initial_gcc > 0 else 100.0
+    
+    return active_graph, {
+        'failed_nodes': num_to_remove,
+        'capacity_lost_pct': cap_lost,
+        'islands_created': final_components - initial_components
+    }
 
 # ---------------------------------------------------------
 # 5. GeoJSON Export Layer (Kepler.gl)
@@ -209,19 +239,10 @@ def export_to_geojson(graph, output_path):
 # 6. Geospatial Visualization Layer (2D Plotting)
 # ---------------------------------------------------------
 def visualize_network_resilience(original_img, mask_img, graph, metrics=None, save_path=None):
-    fig, axes = plt.subplots(1, 3, figsize=(24, 8))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
     
-    axes[0].imshow(original_img)
-    axes[0].set_title("Original Satellite Imagery", fontsize=16)
-    axes[0].axis('off')
-    
-    axes[1].imshow(mask_img, cmap='gray')
-    axes[1].set_title("Predicted Road Topology", fontsize=16)
-    axes[1].axis('off')
-    
-    axes[2].imshow(original_img)
-    axes[2].set_title("Structural Chokepoint Analysis", fontsize=16)
-    axes[2].axis('off')
+    ax.imshow(original_img)
+    ax.axis('off')
     
     edge_centralities = [data.get('betweenness', 0) for u, v, data in graph.edges(data=True) if data.get('status', 'active') == 'active']
     if edge_centralities:
@@ -241,34 +262,43 @@ def visualize_network_resilience(original_img, mask_img, graph, metrics=None, sa
             cent = data.get('betweenness', 0)
             color = cmap(norm(cent))
             lw = 1.5 + 4.0 * ((cent - min_cent) / (max_cent - min_cent))
-            axes[2].plot(pts[:, 1], pts[:, 0], color=color, linewidth=lw, alpha=0.85)
+            ax.plot(pts[:, 1], pts[:, 0], color=color, linewidth=lw, alpha=0.85)
         else:
             # Destroyed Roads (Trigger or Cascade)
-            axes[2].plot(pts[:, 1], pts[:, 0], color='red', linewidth=4.0, alpha=0.9, linestyle='--')
+            ax.plot(pts[:, 1], pts[:, 0], color='red', linewidth=4.0, alpha=0.9, linestyle='--')
         
     node_pts = np.array([graph.nodes[node]['o'] for node in graph.nodes()])
     if len(node_pts) > 0:
-        axes[2].scatter(node_pts[:, 1], node_pts[:, 0], c='cyan', s=15, zorder=5)
+        ax.scatter(node_pts[:, 1], node_pts[:, 0], c='cyan', s=15, zorder=5)
         
-    axes[2].scatter([], [], c='cyan', s=30, label='Intersections (Nodes)')
-    axes[2].legend(loc='lower right', facecolor='black', labelcolor='white', framealpha=0.8)
+    ax.scatter([], [], c='cyan', s=30, label='Intersections (Nodes)')
+    ax.legend(loc='lower right', facecolor='black', labelcolor='white', framealpha=0.8)
     
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    cbar = fig.colorbar(sm, ax=axes[2], fraction=0.046, pad=0.04)
+    cbar = fig.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
     cbar.set_label('Structural Vulnerability (Centrality)', fontsize=12, color='black')
         
     if metrics:
-        info_text = (
-            f"CASCADING OVERLOAD SIMULATION\n"
-            f"----------------------------------------\n"
-            f"Cascade Trigger: 1 Primary Chokepoint Failed\n"
-            f"Domino Effect: {metrics['failed_edges_total'] - 1} secondary roads collapsed\n"
-            f"Cascade Depth: {metrics['cascade_steps']} steps\n"
-            f"Network Fragmentation: {metrics['gcc_size_drop_percent']:.1f}% capacity lost"
-        )
-        axes[2].text(0.02, 0.98, info_text, transform=axes[2].transAxes, 
-                     fontsize=14, color='white', verticalalignment='top',
+        if metrics.get('mode') == 'cascading_overload':
+            info_text = (
+                f"CASCADING OVERLOAD SIMULATION\n"
+                f"----------------------------------------\n"
+                f"Cascade Trigger: 1 Primary Chokepoint Failed\n"
+                f"Domino Effect: {metrics.get('failed_edges_total', 1) - 1} secondary roads collapsed\n"
+                f"Cascade Depth: {metrics.get('cascade_steps', 0)} steps\n"
+                f"Network Fragmentation: {metrics.get('capacity_lost_pct', 0):.1f}% capacity lost"
+            )
+        else:
+            info_text = (
+                f"RANDOM ATTACK SIMULATION\n"
+                f"----------------------------------------\n"
+                f"Total Intersections Failed: {metrics.get('failed_nodes', 0)}\n"
+                f"New Islands Created: {metrics.get('islands_created', 0)}\n"
+                f"Network Fragmentation: {metrics.get('capacity_lost_pct', 0):.1f}% capacity lost"
+            )
+        ax.text(0.02, 0.98, info_text, transform=ax.transAxes, 
+                     fontsize=12, color='white', verticalalignment='top',
                      bbox=dict(facecolor='black', alpha=0.75, boxstyle='round,pad=0.5'))
 
     plt.tight_layout()
