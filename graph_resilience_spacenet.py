@@ -19,12 +19,13 @@ if __name__ == "__main__":
     print("="*70)
     
     print("[*] Automatically generating a new Multi-Spectral SpaceNet Mask...")
-    img_save_path, mask_save_path, chip_id = test_generalization()
+    img_save_path, mask_save_path, chip_id, original_tif_path = test_generalization()
     
     if os.path.exists(img_save_path) and os.path.exists(mask_save_path):
         print(f"\n[*] Loading satellite image crop: {img_save_path}")
         original_img = io.imread(img_save_path)
-        img_h, img_w = original_img.shape[:2]
+        # The inference output is now upscaled to 1280x1280 for spatial matching
+        img_w, img_h = 1280, 1280
         
         print(f"[*] Loading segmentation mask: {mask_save_path}")
         mask_img = io.imread(mask_save_path, as_gray=True)
@@ -46,7 +47,7 @@ if __name__ == "__main__":
             print(f"    - Network Fragmentation: {cascade_metrics['gcc_size_drop_percent']:.1f}% capacity lost")
             
             print("\n[*] 4. Projecting Graph to Earth Coordinates...")
-            export_graph = project_graph_to_geo(export_graph, img_width=img_w, img_height=img_h, img_path=img_save_path)
+            export_graph = project_graph_to_geo(export_graph, img_width=img_w, img_height=img_h, img_path=original_tif_path)
             
             os.makedirs("resilience", exist_ok=True)
             geojson_path = f"resilience/Network_Resilience_3D_MS_chip{chip_id}.geojson"

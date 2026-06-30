@@ -46,7 +46,14 @@ def test_generalization(model_path="mumbai_finetuned_model.pth", show_plot=False
     
     random_idx = random.randint(0, len(dataset) - 1)
     sample = dataset[random_idx] 
-    print(f"[*] Fetched SpaceNet Image #{random_idx}")
+    original_tif_path = dataset.images[random_idx]
+    
+    # Extract chip ID from filename for cleaner logging
+    import re
+    chip_match = re.search(r'chip(\d+)', original_tif_path)
+    chip_id = chip_match.group(1) if chip_match else str(random_idx)
+    
+    print(f"[*] Fetched SpaceNet Image #{chip_id}")
     
     # 3. Preprocess SpaceNet exactly like we did during the Mumbai phase
     image = sample['image'].float().unsqueeze(0) 
@@ -58,6 +65,10 @@ def test_generalization(model_path="mumbai_finetuned_model.pth", show_plot=False
     # Center Crop to 320x320
     image_rgb = TF.center_crop(image_rgb, [320, 320])
     mask_true = TF.center_crop(mask_true, [320, 320])
+    
+    # --- CRITICAL FIX: Spatial Resolution Matching (1.2m -> 0.3m) ---
+    import torch.nn.functional as F
+    image_rgb = F.interpolate(image_rgb, size=(1280, 1280), mode="bilinear", align_corners=False)
     
     # --- CRITICAL FIX: Image Normalization ---
     batch_min = image_rgb.amin(dim=(1, 2, 3), keepdim=True)
@@ -116,7 +127,7 @@ def test_generalization(model_path="mumbai_finetuned_model.pth", show_plot=False
     print(f"\n[*] Saved RGB Image to {img_save_path}")
     print(f"[*] Saved Prediction Mask to {mask_save_path}")
     
-    return img_save_path, mask_save_path, random_idx
+    return img_save_path, mask_save_path, chip_id, original_tif_path
 
 if __name__ == "__main__":
     test_generalization(show_plot=True)
