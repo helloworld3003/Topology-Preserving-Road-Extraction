@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import torchvision.transforms.functional as TF
 import segmentation_models_pytorch as smp
 from torchgeo.datasets import SpaceNet5
+from PIL import Image
 
 # ---------------------------------------------------------
 # 1. Initialize Identical Model Architecture
@@ -19,9 +20,9 @@ def get_model():
     return model
 
 # ---------------------------------------------------------
-# 2. Generalization Inference Logic
+# 2. Main Inference Function
 # ---------------------------------------------------------
-def test_generalization(model_path="mumbai_finetuned_model.pth"):
+def test_generalization(model_path="mumbai_finetuned_model.pth", show_plot=False):
     print("\n========== CROSS-DATASET GENERALIZATION TEST ==========")
     print(f"[*] Testing how well the DeepGlobe-trained model performs on SpaceNet 5 data!")
     
@@ -81,26 +82,41 @@ def test_generalization(model_path="mumbai_finetuned_model.pth"):
     
     prediction_thresholded = (prediction > 0.25).astype(float)
     
-    # 5. Plotting
-    print("[*] Generating Visualization...")
-    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+    # 5. Plotting (Only if requested)
+    if show_plot:
+        print("[*] Generating Visualization...")
+        fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+        
+        axs[0].imshow(img_display)
+        axs[0].set_title("Input (SpaceNet Mumbai)")
+        axs[0].axis('off')
+        
+        axs[1].imshow(mask_true, cmap='gray')
+        axs[1].set_title("Ground Truth (Actual Roads)")
+        axs[1].axis('off')
+        
+        axs[2].imshow(prediction_thresholded, cmap='magma')
+        axs[2].set_title("DeepGlobe Model Prediction")
+        axs[2].axis('off')
+        
+        plt.suptitle("Cross-Dataset Generalization Test", fontsize=16)
+        plt.tight_layout()
+        plt.show()
+        print("[+] Done! Close the plot window to exit.")
+        
+    # 6. Save RGB Image and Mask to disk
+    img_save_path = "spacenet_generalize_img.jpg"
+    mask_save_path = "spacenet_generalize_mask.png"
     
-    axs[0].imshow(img_display)
-    axs[0].set_title("Input (SpaceNet Mumbai)")
-    axs[0].axis('off')
+    img_uint8 = (img_display * 255).astype('uint8')
+    mask_uint8 = (prediction_thresholded * 255).astype('uint8')
     
-    axs[1].imshow(mask_true, cmap='gray')
-    axs[1].set_title("Ground Truth (Actual Roads)")
-    axs[1].axis('off')
+    Image.fromarray(img_uint8).save(img_save_path)
+    Image.fromarray(mask_uint8).save(mask_save_path)
+    print(f"\n[*] Saved RGB Image to {img_save_path}")
+    print(f"[*] Saved Prediction Mask to {mask_save_path}")
     
-    axs[2].imshow(prediction_thresholded, cmap='magma')
-    axs[2].set_title("DeepGlobe Model Prediction")
-    axs[2].axis('off')
-    
-    plt.suptitle("Cross-Dataset Generalization Test", fontsize=16)
-    plt.tight_layout()
-    plt.show()
-    print("[+] Done! Close the plot window to exit.")
+    return img_save_path, mask_save_path, random_idx
 
 if __name__ == "__main__":
-    test_generalization()
+    test_generalization(show_plot=True)

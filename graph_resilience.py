@@ -7,6 +7,7 @@ from skimage import io
 import random
 import copy
 import os
+import json
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
@@ -18,16 +19,9 @@ def mask_to_graph(mask_array):
     Converts a binary road segmentation mask into a networkx Graph.
     Uses skeletonization to thin the mask to 1-pixel wide paths.
     """
-    # Ensure binary format (values > 0)
     binary_mask = (mask_array > 0).astype(np.uint8)
-    
-    # Extract the single-pixel wide centerline network
     skeleton = skeletonize(binary_mask)
-    
-    # Build the networkx graph from the skeleton
-    # Nodes are intersections, edges are road segments
     graph = sknw.build_sknw(skeleton)
-    
     return graph, skeleton
 
 # ---------------------------------------------------------
@@ -38,154 +32,240 @@ def calculate_centrality(graph):
     Calculates Betweenness Centrality for nodes and edges to mathematically 
     identify which road segments act as critical bottlenecks.
     """
-    # Calculate edge betweenness centrality
-    # (weight='weight' uses the physical length of the road segment sknw provides)
     edge_centrality = nx.edge_betweenness_centrality(graph, weight='weight')
-    
-    # Map centrality values back onto the graph attributes
     nx.set_edge_attributes(graph, edge_centrality, 'betweenness')
     
-    # Calculate node betweenness centrality (for intersections)
     node_centrality = nx.betweenness_centrality(graph, weight='weight')
     nx.set_node_attributes(graph, node_centrality, 'betweenness')
     
     return graph
 
 # ---------------------------------------------------------
-# 3. Disaster & Percolation Simulation
+# 3. Geo-Spatial Projection Layer
 # ---------------------------------------------------------
-def simulate_disaster(graph, deletion_fraction=0.2, mode="random"):
+def project_graph_to_geo(G, img_width=1024, img_height=1024, img_path=None):
     """
-    Simulates network failure by removing edges.
-    modes: 
-      - "random" (unpredictable disruption like floods)
-      - "targeted" (removes highest centrality structural chokepoints first)
+    Translates pixel-based graph nodes to real-world coordinates.
+    If a GeoTIFF image is provided, it extracts the exact bounds using rasterio.
+    Otherwise, it uses an affine bounding-box transformation over Mumbai, India.
     """
-    # Work on a copy of the graph
-    g_sim = graph.copy()
+    LON_MIN, LON_MAX = 72.7692, 73.1165 
+    LAT_MIN, LAT_MAX = 18.8894, 19.3274 
     
-    # Pre-disaster stats
-    initial_components = nx.number_connected_components(g_sim)
-    if initial_components > 0:
-        # Giant Connected Component (GCC) size
-        initial_gcc = max(len(c) for c in nx.connected_components(g_sim))
+    if img_path and str(img_path).lower().endswith('.tif'):
+        try:
+            import rasterio
+            with rasterio.open(img_path) as src:
+                bounds = src.bounds
+                LON_MIN, LON_MAX = bounds.left, bounds.right
+                LAT_MIN, LAT_MAX = bounds.bottom, bounds.top
+                img_width = src.width
+                img_height = src.height
+                print(f"[*] Successfully extracted real GPS metadata from GeoTIFF: {img_path}")
+                print(f"    -> Bounds: Lon({LON_MIN:.4f}, {LON_MAX:.4f}), Lat({LAT_MIN:.4f}, {LAT_MAX:.4f})")
+        except Exception as e:
+            print(f"[!] Failed to read rasterio metadata from {img_path}: {e}")
+            print(f"[*] Falling back to default Mumbai bounding box...")
     else:
-        initial_gcc = 0
-        
-    edges = list(g_sim.edges(data=True))
-    num_to_remove = int(len(edges) * deletion_fraction)
+        print("[*] Projecting pixel graph onto Earth coordinates using default Mumbai bounding box...")
     
-    # Select edges to remove based on mode
-    if mode == "random":
-        edges_to_remove = random.sample(edges, num_to_remove)
-    elif mode == "targeted":
-        # Sort edges by betweenness centrality (highest first)
-        edges_sorted = sorted(edges, key=lambda x: x[2].get('betweenness', 0), reverse=True)
-        edges_to_remove = edges_sorted[:num_to_remove]
-    else:
-        raise ValueError("mode must be 'random' or 'targeted'")
+    for node, data in G.nodes(data=True):
+        y_pixel, x_pixel = data['o']
+        lon = LON_MIN + (x_pixel / img_width) * (LON_MAX - LON_MIN)
+        lat = LAT_MAX - (y_pixel / img_height) * (LAT_MAX - LAT_MIN)
+        G.nodes[node]['lon'] = lon
+        G.nodes[node]['lat'] = lat
         
-    # Execute attack
-    for u, v, data in edges_to_remove:
-        if g_sim.has_edge(u, v):
-            g_sim.remove_edge(u, v)
+    for u, v, data in G.edges(data=True):
+        geo_pts = []
+        for pt in data['pts']:
+            y_pixel, x_pixel = pt
+            lon = LON_MIN + (x_pixel / img_width) * (LON_MAX - LON_MIN)
+            lat = LAT_MAX - (y_pixel / img_height) * (LAT_MAX - LAT_MIN)
+            geo_pts.append([lon, lat])
+        data['geo_pts'] = geo_pts
+        
+    return G
+
+# ---------------------------------------------------------
+# 4. Disaster Simulation (Cascading Overload)
+# ---------------------------------------------------------
+def simulate_cascading_failure(graph, tolerance=1.5):
+    """
+    Simulates dynamic load redistribution. When a critical road fails, 
+    its traffic dumps onto neighboring roads, potentially causing them 
+    to exceed their capacity and fail in a chain reaction.
+    """
+    export_graph = graph.copy()
+    
+    for u, v, data in export_graph.edges(data=True):
+        load = data.get('betweenness', 0.0)
+        data['initial_load'] = load
+        data['capacity'] = load * tolerance
+        data['status'] = 'active'
+        
+    active_graph = export_graph.copy()
+    
+    initial_components = nx.number_connected_components(active_graph)
+    initial_gcc = max(len(c) for c in nx.connected_components(active_graph)) if initial_components > 0 else 0
+    
+    edges = list(active_graph.edges(data=True))
+    if not edges:
+        return export_graph, active_graph, {}
+        
+    # Trigger Failure
+    highest_edge = max(edges, key=lambda x: x[2].get('betweenness', 0))
+    active_graph.remove_edge(highest_edge[0], highest_edge[1])
+    export_graph[highest_edge[0]][highest_edge[1]]['status'] = 'trigger_destroyed'
+    failed_edges_count = 1
+    
+    # Cascade Loop
+    cascade_step = 1
+    while True:
+        new_centrality = nx.edge_betweenness_centrality(active_graph, weight='weight')
+        nx.set_edge_attributes(active_graph, new_centrality, 'betweenness')
+        
+        overloaded = []
+        for u, v, data in active_graph.edges(data=True):
+            if data['betweenness'] > export_graph[u][v]['capacity']:
+                overloaded.append((u, v))
+                
+        if not overloaded:
+            break
             
-    # Post-disaster stats
-    post_components = nx.number_connected_components(g_sim)
-    if post_components > 0:
-        post_gcc = max(len(c) for c in nx.connected_components(g_sim))
-    else:
-        post_gcc = 0
-        
-    # Calculate fragmentation severity
+        for u, v in overloaded:
+            if active_graph.has_edge(u, v):
+                active_graph.remove_edge(u, v)
+                export_graph[u][v]['status'] = f'failed_step_{cascade_step}'
+                failed_edges_count += 1
+                
+        cascade_step += 1
+                
+    post_components = nx.number_connected_components(active_graph)
+    post_gcc = max(len(c) for c in nx.connected_components(active_graph)) if post_components > 0 else 0
     gcc_drop_percentage = ((initial_gcc - post_gcc) / initial_gcc) * 100 if initial_gcc > 0 else 0
     
     metrics = {
-        "mode": mode,
-        "deletion_fraction": deletion_fraction,
+        "mode": "cascading_overload",
+        "tolerance": tolerance,
+        "failed_edges_total": failed_edges_count,
+        "cascade_steps": cascade_step - 1,
         "initial_components": initial_components,
         "post_components": post_components,
-        "initial_gcc_size": initial_gcc,
-        "post_gcc_size": post_gcc,
         "gcc_size_drop_percent": gcc_drop_percentage
     }
     
-    return g_sim, metrics
+    return export_graph, active_graph, metrics
 
 # ---------------------------------------------------------
-# 4. Geospatial Visualization Layer
+# 5. GeoJSON Export Layer (Kepler.gl)
+# ---------------------------------------------------------
+def export_to_geojson(graph, output_path):
+    """
+    Exports the projected graph to a standard GeoJSON FeatureCollection.
+    """
+    features = []
+    
+    for u, v, data in graph.edges(data=True):
+        if 'geo_pts' not in data:
+            continue
+        properties = {
+            "betweenness": float(data.get('betweenness', 0.0)),
+            "capacity": float(data.get('capacity', 0.0)),
+            "initial_load": float(data.get('initial_load', 0.0)),
+            "status": str(data.get('status', 'active'))
+        }
+        feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": data['geo_pts']
+            },
+            "properties": properties
+        }
+        features.append(feature)
+        
+    for node, data in graph.nodes(data=True):
+        if 'lon' in data and 'lat' in data:
+            feature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [data['lon'], data['lat']]
+                },
+                "properties": {
+                    "betweenness": float(data.get('betweenness', 0.0)),
+                    "node_id": int(node)
+                }
+            }
+            features.append(feature)
+            
+    geojson = {"type": "FeatureCollection", "features": features}
+    with open(output_path, 'w') as f:
+        json.dump(geojson, f)
+    print(f"[*] GeoJSON successfully exported to: {output_path}")
+
+# ---------------------------------------------------------
+# 6. Geospatial Visualization Layer (2D Plotting)
 # ---------------------------------------------------------
 def visualize_network_resilience(original_img, mask_img, graph, metrics=None, save_path=None):
-    """
-    Overlays the network graph on top of the original image,
-    highlighting critical chokepoints dynamically based on betweenness centrality.
-    """
     fig, axes = plt.subplots(1, 3, figsize=(24, 8))
     
-    # Plot 1: Original Image
     axes[0].imshow(original_img)
     axes[0].set_title("Original Satellite Imagery", fontsize=16)
     axes[0].axis('off')
     
-    # Plot 2: Binary Mask
     axes[1].imshow(mask_img, cmap='gray')
     axes[1].set_title("Predicted Road Topology", fontsize=16)
     axes[1].axis('off')
     
-    # Plot 3: Network Resilience Graph Overlay
     axes[2].imshow(original_img)
     axes[2].set_title("Structural Chokepoint Analysis", fontsize=16)
     axes[2].axis('off')
     
-    # Extract edge centralities for dynamic color mapping (Heatmap style)
-    edge_centralities = [data.get('betweenness', 0) for u, v, data in graph.edges(data=True)]
-    
+    edge_centralities = [data.get('betweenness', 0) for u, v, data in graph.edges(data=True) if data.get('status', 'active') == 'active']
     if edge_centralities:
-        max_cent = max(edge_centralities)
-        min_cent = min(edge_centralities)
-        if max_cent == min_cent:
-            max_cent = min_cent + 1e-6
+        max_cent, min_cent = max(edge_centralities), min(edge_centralities)
+        if max_cent == min_cent: max_cent = min_cent + 1e-6
     else:
-        max_cent = 1
-        min_cent = 0
+        max_cent, min_cent = 1, 0
 
     norm = mcolors.Normalize(vmin=min_cent, vmax=max_cent)
-    cmap = cm.inferno # Bright yellow/white = Critical Bottleneck
+    cmap = cm.inferno 
     
-    # Draw graph edges onto the image
     for (u, v, data) in graph.edges(data=True):
-        pts = data['pts'] # The spatial pixel coordinates generated by sknw
-        cent = data.get('betweenness', 0)
-        color = cmap(norm(cent))
+        pts = data['pts'] 
+        status = data.get('status', 'active')
         
-        # Thicken lines dynamically for higher centrality
-        lw = 1.5 + 4.0 * ((cent - min_cent) / (max_cent - min_cent))
-        axes[2].plot(pts[:, 1], pts[:, 0], color=color, linewidth=lw, alpha=0.85)
+        if status == 'active':
+            cent = data.get('betweenness', 0)
+            color = cmap(norm(cent))
+            lw = 1.5 + 4.0 * ((cent - min_cent) / (max_cent - min_cent))
+            axes[2].plot(pts[:, 1], pts[:, 0], color=color, linewidth=lw, alpha=0.85)
+        else:
+            # Destroyed Roads (Trigger or Cascade)
+            axes[2].plot(pts[:, 1], pts[:, 0], color='red', linewidth=4.0, alpha=0.9, linestyle='--')
         
-    # Draw graph nodes (intersections)
     node_pts = np.array([graph.nodes[node]['o'] for node in graph.nodes()])
     if len(node_pts) > 0:
         axes[2].scatter(node_pts[:, 1], node_pts[:, 0], c='cyan', s=15, zorder=5)
         
-    # Add Legend for the intersection points
     axes[2].scatter([], [], c='cyan', s=30, label='Intersections (Nodes)')
     axes[2].legend(loc='lower right', facecolor='black', labelcolor='white', framealpha=0.8)
     
-    # Add Colorbar for the edge heatmap
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     cbar = fig.colorbar(sm, ax=axes[2], fraction=0.046, pad=0.04)
     cbar.set_label('Structural Vulnerability (Centrality)', fontsize=12, color='black')
         
-    # Add Disaster Metrics Overlay
     if metrics:
         info_text = (
-            f"DISASTER SIMULATION METRICS\n"
+            f"CASCADING OVERLOAD SIMULATION\n"
             f"----------------------------------------\n"
-            f"Attack Type: {metrics['deletion_fraction']*100:.0f}% {metrics['mode'].capitalize()} Failure\n"
-            f"Pre-Attack Subgraphs: {metrics['initial_components']}\n"
-            f"Post-Attack Subgraphs: {metrics['post_components']} (Fragmentation)\n"
-            f"GCC Connectivity Drop: {metrics['gcc_size_drop_percent']:.1f}%"
+            f"Cascade Trigger: 1 Primary Chokepoint Failed\n"
+            f"Domino Effect: {metrics['failed_edges_total'] - 1} secondary roads collapsed\n"
+            f"Cascade Depth: {metrics['cascade_steps']} steps\n"
+            f"Network Fragmentation: {metrics['gcc_size_drop_percent']:.1f}% capacity lost"
         )
         axes[2].text(0.02, 0.98, info_text, transform=axes[2].transAxes, 
                      fontsize=14, color='white', verticalalignment='top',
@@ -194,7 +274,7 @@ def visualize_network_resilience(original_img, mask_img, graph, metrics=None, sa
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
-        print(f"[*] Visualization saved to: {save_path}")
+        print(f"[*] 2D Visualization saved to: {save_path}")
 
 # ---------------------------------------------------------
 # Execution Block
@@ -204,15 +284,14 @@ if __name__ == "__main__":
     print("  NETWORK RESILIENCE & DISASTER SIMULATION (GRAPH THEORY)")
     print("="*70)
     
-    # NOTE: To test this locally, place a valid satellite image and its corresponding mask here.
-    # For now, this is a template block ready for your specific image paths.
-    img=5668
-    test_img_path = "archive/train/"+str(img)+"_sat.jpg"   # Adjust to an actual image you want to test
-    test_mask_path = "archive/train/"+str(img)+"_mask.png" # Adjust to the prediction or ground truth mask
+    img = 5668
+    test_img_path = f"archive/train/{img}_sat.jpg"   
+    test_mask_path = f"archive/train/{img}_mask.png" 
     
     if os.path.exists(test_img_path) and os.path.exists(test_mask_path):
         print(f"[*] Loading satellite image: {test_img_path}")
         original_img = io.imread(test_img_path)
+        img_h, img_w = original_img.shape[:2]
         
         print(f"[*] Loading segmentation mask: {test_mask_path}")
         mask_img = io.imread(test_mask_path, as_gray=True)
@@ -226,31 +305,27 @@ if __name__ == "__main__":
             print("[*] 2. Calculating Structural Chokepoints (Betweenness Centrality)...")
             graph = calculate_centrality(graph)
             
-            print("\n[*] 3. Running Disaster & Percolation Simulations...")
+            print("\n[*] 3. Running Dynamic Cascading Overload Simulation...")
+            export_graph, active_graph, cascade_metrics = simulate_cascading_failure(graph, tolerance=1.5)
             
-            # Simulate 15% Random Failure (e.g., flash flooding)
-            print("  --- SIMULATION: 15% RANDOM FAILURE ---")
-            rand_graph, rand_metrics = simulate_disaster(graph, deletion_fraction=0.15, mode="random")
-            print(f"    Initial Subgraphs (Islands) : {rand_metrics['initial_components']}")
-            print(f"    Post-Disaster Subgraphs     : {rand_metrics['post_components']}")
-            print(f"    Network Fragmentation       : {rand_metrics['gcc_size_drop_percent']:.1f}% capacity lost")
+            print(f"    - Cascade Depth: {cascade_metrics['cascade_steps']} chain-reaction steps")
+            print(f"    - Total Roads Failed: {cascade_metrics['failed_edges_total']}")
+            print(f"    - Network Fragmentation: {cascade_metrics['gcc_size_drop_percent']:.1f}% capacity lost")
             
-            # Simulate 15% Targeted Attack (e.g., strategic structural collapse)
-            print("\n  --- SIMULATION: 15% TARGETED ATTACK ---")
-            targ_graph, targ_metrics = simulate_disaster(graph, deletion_fraction=0.15, mode="targeted")
-            print(f"    Initial Subgraphs (Islands) : {targ_metrics['initial_components']}")
-            print(f"    Post-Disaster Subgraphs     : {targ_metrics['post_components']}")
-            print(f"    Network Fragmentation       : {targ_metrics['gcc_size_drop_percent']:.1f}% capacity lost")
+            print("\n[*] 4. Projecting Graph to Earth Coordinates...")
+            export_graph = project_graph_to_geo(export_graph, img_width=img_w, img_height=img_h, img_path=test_img_path)
             
-            print("\n[*] 4. Generating Geospatial Visualization Layer...")
             os.makedirs("resilience", exist_ok=True)
-            save_file = f"resilience/Network_Resilience_Analysis_{img}.png"
-            visualize_network_resilience(original_img, mask_img, graph, metrics=targ_metrics, save_path=save_file)
+            geojson_path = f"resilience/Network_Resilience_3D_{img}.geojson"
+            print("\n[*] 5. Exporting GeoJSON for Kepler.gl...")
+            export_to_geojson(export_graph, geojson_path)
             
-            print("\n[+] Graph Resilience Analysis Complete!")
+            print("\n[*] 6. Generating 2D Geospatial Visualization Layer...")
+            save_file = f"resilience/Network_Resilience_Analysis_{img}.png"
+            visualize_network_resilience(original_img, mask_img, export_graph, metrics=cascade_metrics, save_path=save_file)
+            
+            print("\n[+] Graph Resilience Analysis & Geo Export Complete!")
         else:
             print("[!] Warning: No valid road network found in the mask to build a graph.")
     else:
         print(f"[!] Example files not found.")
-        print(f"    Looked for: {test_img_path}")
-        print("    Please point test_img_path and test_mask_path to real images inside the script.")
