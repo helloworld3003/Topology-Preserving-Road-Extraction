@@ -1,8 +1,46 @@
-# Topology-Preserving Road Extraction (ISRO Hackathon)
+<div align="center">
+  
+# 🛰️ Bharatiya Antariksh Hackathon 2026
 
-This repository contains an end-to-end deep learning pipeline designed to extract complex road networks from high-resolution satellite imagery. It is built to natively support **SpaceNet 5** (Mumbai, Moscow) and **DeepGlobe** datasets.
+### Route Resilience: Occlusion-Robust Road Extraction & Graph-Theoretic Criticality Analysis for Urban Mobility
 
-## 🗺️ Project Flowchart
+[![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)](https://streamlit.io/)
+[![NetworkX](https://img.shields.io/badge/NetworkX-00599C?style=for-the-badge&logo=networkx&logoColor=white)](https://networkx.org/)
+[![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white)](https://opencv.org/)
+
+**Team Name:** Root  
+**Team Members:** Swastik Saha (Leader), Tapomoy Sarkar, Arka Prava Das, Soumalya Dey  
+**Institution:** Jadavpur University  
+
+</div>
+
+---
+
+## 🚀 The Problem & Our USP
+
+Standard road extraction models use standard pixel-matching algorithms (like BCE or standard Dice). This causes them to output roads that are fragmented and disconnected. If a tree branch covers a road, standard models break the road in half.
+
+**Our Difference:** We implemented **clDice (Centerline-Dice)**, a cutting-edge topological loss function, alongside a massive **VGG Topology Loss**.
+
+### 1. Soft-Skeletonization
+Because neural networks require differentiable math, we cannot use standard computer vision skeletonization. Instead, we use "Soft Skeletonization" via morphological operations:
+* **Erosion (Min-Pooling):** Shrinks the image using a minimum filter.
+* **Dilation (Max-Pooling):** Expands it back out.
+* By subtracting the dilated volume from the original volume, we mathematically isolate the absolute center ridge of the road. This iterates 10 times to build the final continuous Skeleton.
+
+Because the neural network is severely penalized if a skeleton fragment is stranded outside a volume, it physically forces the AI to draw continuous, unbroken connections.
+
+### 2. Multi-Modal Judge Architecture
+The loss functions are strictly separated from the inference architecture. The **UNet++** acts as the Predictor, while the **Hybrid Loss** acts as a multi-modal Judge during training.
+
+---
+
+## 🏛️ Architecture & Flowchart
+
+<div align="center">
+  <img src="Documentation/architecture_diagram.svg" alt="Architecture Diagram" width="80%">
+</div>
 
 ```mermaid
 flowchart TB
@@ -31,7 +69,6 @@ flowchart TB
         L((Combined Loss Function)) --> M[AdamW Optimizer]
     end
 
-    %% External links connecting the subgraphs
     Z --> G
     H --> I1
     H2 --> I2
@@ -40,93 +77,87 @@ flowchart TB
 
 ---
 
-## 🧠 The Core Engine: `soft-clDice` Loss
+## 🏆 Our Accomplishments
 
-Extracting tubular structures like roads or blood vessels is a uniquely difficult computer vision problem. Standard loss functions (like Cross-Entropy or standard Dice) are calculated pixel-by-pixel. If a model misses a single pixel that connects a 5-mile highway, standard Dice barely penalizes it because it's "just one pixel." However, in reality, the road network's **topology is fundamentally broken**.
+### 1. Raw Satellite Data To Road Masks
+We successfully trained models on both the SpaceNet 5 (Mumbai) and DeepGlobe datasets. With our combined loss functions, the model performs exceptionally well even on narrow city roads covered with trees and shadows.
 
-To solve this, we implemented **`soft-clDice`** (Centerline Dice), introduced in the CVPR 2021 paper: *"clDice - A Novel Topology-Preserving Loss Function for Tubular Structure Segmentation"*.
+<div align="center">
+  <img src="Comparisons/best_match_rank_17.png" alt="Raw Data to Mask" width="90%">
+</div>
 
-### 1. Soft-Skeletonization (Algorithm 1)
-To penalize broken roads, the model must understand the "centerline" or "skeleton" of the road network. However, traditional morphological skeletonization algorithms (like those in Scikit-Image) are non-differentiable—meaning a neural network cannot learn or backpropagate through them. 
+### 2. Mask to Graph Threat Resilience
+We take the neural network's raw output mask and "skeletonize" it. We then run a Skeleton-to-Network (sknw) algorithm that converts these pixels into a mathematical Graph. 
 
-Our pipeline implements the paper's differentiable proxy for skeletonization using **iterative min/max pooling**:
-* **Min Pooling (Erosion):** Shrinks the road.
-* **Max Pooling (Dilation):** Expands it back out.
-* By subtracting the morphologically opened image from the original, we extract the skeletal structure purely using PyTorch tensors, allowing gradients to flow freely during training!
+We use Network Theory to calculate the Betweenness Centrality of every single intersection to identify critical Choke Points:
+1. **Targeted Attacks:** We deliberately delete those high-value Choke Points first, causing a rapid collapse in transit capacity (Simulating Targeted Overload).
+2. **Random Attacks:** We delete intersections entirely by chance, simulating natural disasters (Floods, Earthquakes). The network usually survives Random Attacks much longer, degrading slowly rather than collapsing all at once.
 
-### 2. Topological Metrics (Algorithm 2)
-Once we have the differentiable skeletons for both the Ground Truth ($S_L$) and the Prediction ($S_P$), we calculate:
-* **Topology Precision ($T_{prec}$):** The percentage of the predicted skeleton that accurately falls inside the true road mask.
-* **Topology Sensitivity ($T_{sens}$):** The percentage of the true skeleton that is successfully covered by the predicted road mask.
-
-The final **`soft-clDice`** score is the harmonic mean of $T_{prec}$ and $T_{sens}$. The total loss function combines standard soft-Dice (for volumetric accuracy) and soft-clDice (for topological connectivity) using a weighting factor of $\alpha = 0.45$.
-
----
-
-## ⚙️ Features Implemented
-
-1. **Universal RGB Compatibility:** SpaceNet 5 uses 8-band multispectral imagery, which historically locked models into requiring specialized data. We implemented an on-the-fly tensor slicing algorithm that strips the infrared data, forcing the model to become an absolute master at standard RGB road extraction. This makes the model universally compatible with Google Maps, Drones, and the DeepGlobe dataset.
-2. **Transfer Learning Pipeline:** The architecture is designed to train on one city (e.g., Mumbai), automatically save its weights, and dynamically load those weights to continue fine-tuning on a completely different geography (e.g., Moscow or DeepGlobe).
-3. **Continuous Checkpointing:** The pipeline writes to the `.pth` file continuously at the end of every epoch. If a massive 15-hour training run crashes at hour 14, the weights from the previous epoch are safely preserved.
-4. **Hardware Fallback & Automatic Mixed Precision (AMP):** Dynamically detects execution environments, scaling down to CPU-safe parameters for development on Intel Iris Xe laptops, while instantly activating PyTorch `autocast()` and `GradScaler` to halve VRAM and double training speed when deployed on an RTX 3050 GPU.
-5. **State-of-the-Art Loss Hybridization:** To guarantee the highest possible score, the network runs a massive multi-part loss function:
-   * **BCEWithLogitsLoss:** Anchors the network early to aggressively classify basic road pixels vs background.
-   * **CVPR 2021 soft-clDice:** Refines the binary mask by enforcing strict mathematical connectivity for thin, broken tubular structures.
-   * **CVPR 2018 VGG Topology Loss:** Dynamically spins up a frozen VGG-19 network and matches the deep feature maps of the ground truth and the prediction to inherently force perceptual structural similarity.
-6. **Anti-Overfitting Protocols:** Employs dynamic Data Augmentation (Random Flips) and a Cosine Annealing Learning Rate Scheduler to force deep generalization across 50 epochs.
+<div align="center">
+  <img src="graph_threat_resillience/Network_Resilience_Analysis_5668.png" alt="Threat Resilience Simulation" width="90%">
+</div>
 
 ---
 
-## 🚀 Quick Start Guide (From Scratch)
+## 🗺️ Geospatial Network Resilience Dashboard
 
-Follow these steps exactly to run the pipeline from absolute scratch on your GPU machine:
+We have upgraded the pipeline into a full-scale interactive web application powered by **Streamlit**. 
+
+<div align="center">
+  <video src="Documentation/streamlit-app-2026-07-01-13-53-31.webm" width="90%" controls autoplay loop muted></video>
+</div>
+
+<div align="center">
+  <img src="Documentation/dashboard_page_1.png" alt="Dashboard Terminal Output" width="90%">
+</div>
+<div align="center">
+  <img src="Documentation/dashboard_page_2.png" alt="Dashboard UI Visualizations" width="90%">
+</div>
+
+📄 **[View Full High-Resolution Dashboard Report (PDF)](Documentation/AI%20Road%20Topology%20Dashboard3.pdf)**
+
+### Key Features:
+1. **Dynamic Model & Data Switching:** Select either the SpaceNet or DeepGlobe weights from a dropdown. The backend will autonomously fetch the correct high-res or low-res imagery to match the domain.
+2. **Custom Upload Support:** Safely upload your own arbitrary satellite `.jpg` or `.png`. The engine elegantly pads and resizes the image to 1024x1024 to prevent GPU Out-of-Memory crashes, extracts the roads, and analyzes it.
+3. **Disaster Simulation Engine:** Instantly view the Structural Chokepoint Analysis map and read the real-time simulation metrics (Total Capacity Lost, Domino Effect Depth, etc).
+4. **PyDeck 3D WebGL Mapping:** Extracts precise GPS coordinates from SpaceNet GeoTIFFs (or applies a hyper-realistic 500m fallback bounding box for arbitrary JPGs) to project the entire road graph onto an interactive 3D map of the Earth.
+
+---
+
+## ⚙️ Quick Start Guide
+
+Follow these steps to boot up the dashboard and run the entire pipeline:
 
 1. **Install Dependencies:**
-   Ensure you have your Python environment activated, then install the PyTorch libraries compiled specifically for the RTX 3050's CUDA capabilities:
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Download the Data Natively:**
-   Run the autonomous downloader. This bypasses the need for the AWS CLI or manual extraction tools. It will pull the dataset directly into the `spacenet_data` folder and automatically clean up the heavy tarball. (If your connection drops, just run it again to resume!)
+2. **Download the Data Natively (SpaceNet Mumbai):**
    ```bash
    python download_mumbai.py
    ```
 
-3. **Train Phase 1 (Mumbai):**
-   Initiate the deep learning training loop. This runs for 50 epochs and continuously saves checkpoints.
+3. **Train the Network (Optional):**
    ```bash
    python train.py
    ```
 
-4. **Verify / Run Inference:**
-   Once training is complete (or after an epoch finishes), run the inference script to pluck a random image from the dataset, push it through your newly trained neural network, and plot the actual vs predicted road structures.
+4. **Launch the Streamlit Dashboard:**
+   To interact with the neural network live in your browser and run disaster simulations:
    ```bash
-   python inference.py
-   ```
-
-5. **Train Phase 2 (DeepGlobe Transfer Learning):**
-   *(Optional)* When you are ready to expand beyond SpaceNet, place your DeepGlobe images/masks into the created `deepglobe` directory and run the secondary script. This automatically loads your Mumbai weights and fine-tunes them!
-   ```bash
-   python train2.py
+   streamlit run app.py
    ```
 
 ---
 
-## 🗺️ Live Dashboard & Resilience Analysis
+## 📚 Sources & References
 
-We have upgraded the pipeline into a full-scale interactive web application powered by **Streamlit**. It integrates our PyTorch UNet++ models with a mathematical Graph Theory engine (via NetworkX) to simulate disaster resilience on the predicted road topologies.
+**Datasets:**
+- DeepGlobe Road Extraction Dataset (Kaggle)
+- SpaceNet 5 Mumbai Dataset (AWS)
 
-### Key Features of the Dashboard:
-1. **Dynamic Model & Data Switching:** Select either the SpaceNet or DeepGlobe weights from a dropdown. The backend will autonomously fetch the correct high-res or low-res imagery to match the domain, ensuring perfect cross-dataset generalization testing.
-2. **Custom Upload Support:** Safely upload your own arbitrary satellite `.jpg` or `.png`. The engine elegantly pads and resizes the image to 1024x1024 to prevent GPU Out-of-Memory crashes, extracts the roads, and analyzes it.
-3. **Graph Theory Engine (Disaster Simulation):**
-   * **Targeted Attacks (Cascading Overload):** Identifies the most structurally vital intersection (highest Betweenness Centrality) and destroys it, simulating a traffic overload that triggers a domino effect across the network.
-   * **Random Attacks:** Destroys a set percentage of the network randomly to simulate widespread catastrophic events (like an earthquake), calculating the percentage of network capacity lost and the number of isolated "islands" created.
-4. **PyDeck 3D WebGL Mapping:** Extracts precise GPS coordinates from SpaceNet GeoTIFFs (or applies a hyper-realistic 500m fallback bounding box in Mumbai for JPGs) to project the entire road graph and its identified structural vulnerabilities onto an interactive 3D map of the Earth.
-
-### Running the Dashboard:
-To boot up the user interface and interact with the neural network live in your browser:
-```bash
-streamlit run app.py
-```
+**Research Papers:**
+- *clDice - A Novel Topology-Preserving Loss Function for Tubular Structures* (Shit et al., CVPR 2021)
+- *Beyond the Pixel-Wise Loss for Topology-Aware Delineation* (Mosinska et al., CVPR 2018)
+- *Multiple centrality assessment in Parma: A network analysis of paths and open spaces* (Sergio Porta, Paolo Crucitti and Vito Latora)

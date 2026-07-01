@@ -15,6 +15,7 @@ archive/
 *.rar
 *.geojsonl
 resilience/
+ideation.pdf
 
 # Python Cache
 __pycache__/
