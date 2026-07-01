@@ -12,7 +12,9 @@ spacenet_data/
 deepglobe/
 archive/
 *.zip
+*.rar
 *.geojsonl
+resilience/
 
 # Python Cache
 __pycache__/

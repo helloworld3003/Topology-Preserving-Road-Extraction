@@ -110,3 +110,23 @@ Follow these steps exactly to run the pipeline from absolute scratch on your GPU
    ```bash
    python train2.py
    ```
+
+---
+
+## 🗺️ Live Dashboard & Resilience Analysis
+
+We have upgraded the pipeline into a full-scale interactive web application powered by **Streamlit**. It integrates our PyTorch UNet++ models with a mathematical Graph Theory engine (via NetworkX) to simulate disaster resilience on the predicted road topologies.
+
+### Key Features of the Dashboard:
+1. **Dynamic Model & Data Switching:** Select either the SpaceNet or DeepGlobe weights from a dropdown. The backend will autonomously fetch the correct high-res or low-res imagery to match the domain, ensuring perfect cross-dataset generalization testing.
+2. **Custom Upload Support:** Safely upload your own arbitrary satellite `.jpg` or `.png`. The engine elegantly pads and resizes the image to 1024x1024 to prevent GPU Out-of-Memory crashes, extracts the roads, and analyzes it.
+3. **Graph Theory Engine (Disaster Simulation):**
+   * **Targeted Attacks (Cascading Overload):** Identifies the most structurally vital intersection (highest Betweenness Centrality) and destroys it, simulating a traffic overload that triggers a domino effect across the network.
+   * **Random Attacks:** Destroys a set percentage of the network randomly to simulate widespread catastrophic events (like an earthquake), calculating the percentage of network capacity lost and the number of isolated "islands" created.
+4. **PyDeck 3D WebGL Mapping:** Extracts precise GPS coordinates from SpaceNet GeoTIFFs (or applies a hyper-realistic 500m fallback bounding box in Mumbai for JPGs) to project the entire road graph and its identified structural vulnerabilities onto an interactive 3D map of the Earth.
+
+### Running the Dashboard:
+To boot up the user interface and interact with the neural network live in your browser:
+```bash
+streamlit run app.py
+```
